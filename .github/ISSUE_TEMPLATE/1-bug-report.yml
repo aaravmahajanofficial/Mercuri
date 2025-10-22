@@ -1,0 +1,116 @@
+name: '🐞 Bug Report'
+description: 'Report a bug or unexpected behavior'
+title: '[Bug]: '
+labels: ['bug']
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!  
+        Please include as much detail as possible — API endpoint, logs, stack traces, etc.  
+        This will help me reproduce and fix the problem quickly.
+
+  - type: input
+    id: contact
+    attributes:
+      label: Contact Details
+      description: Optional — how can we reach you for more info?
+      placeholder: ex. email@example.com
+    validations:
+      required: false
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Bug Summary
+      description: Briefly describe the issue you encountered.
+      placeholder: Example — Order creation API returns 500 error when cart is empty.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Describe how to reproduce the issue using API requests.
+      placeholder: |
+        1. Call `POST /api/v1/orders` with payload:
+           ```json
+           {
+              "addressId": "661e8400-e29b-41d4-a716-446655440000",
+              "paymentMethod": "CARD"
+           }
+           ```
+        2. Observe the response or error in logs.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What did you expect the API or backend service to do?
+      placeholder: The API should return HTTP 201 Created with order details.
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: What actually happened instead?
+      placeholder: The API returned HTTP 500 with message "NullPointerException in OrderService".
+
+  - type: input
+    id: endpoint
+    attributes:
+      label: Affected Endpoint or Module
+      description: Specify the API endpoint or backend module where the issue occurs.
+      placeholder: ex. /api/v1/orders or PaymentService
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: Where did you encounter the issue?
+      options:
+        - Production
+        - Staging
+        - Development
+        - Local
+      default: 3
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Application Version
+      description: Which version of the backend are you using?
+      placeholder: ex. 2.3.1
+    validations:
+      required: true
+
+  - type: textarea
+    id: stacktrace
+    attributes:
+      label: Stack Trace or Log Output
+      description: Paste any relevant error logs or stack traces. Automatically formatted as code.
+      render: shell
+
+  - type: input
+    id: dependencies
+    attributes:
+      label: Relevant Dependencies
+      description: Mention any important library versions if relevant (e.g., Spring Boot, Kotlin, Database driver).
+      placeholder: ex. Spring Boot 3.5.6, Kotlin 2.0, PostgreSQL 15
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/aaravmahajanofficial/Mercuri/blob/main/CODE_OF_CONDUCT.md).
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true
