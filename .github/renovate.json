@@ -1,0 +1,13 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:recommended"
+    ],
+    "prHourlyLimit": 0,
+    "prConcurrentLimit": 0,
+    "automerge": true,
+    "labels": [
+        "dependencies"
+    ],
+    "commitMessagePrefix": "chore(deps):"
+}
