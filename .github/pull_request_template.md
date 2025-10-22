@@ -4,7 +4,7 @@
 
 ### Testing done
 
-<!-- Comment:
+<!-- Instructions:
 Provide a clear description of how this change was tested.
 At minimum this should include proof that a computer has executed the changed lines.
 Ideally this should include an automated test or an explanation as to why this change has no tests.
