@@ -23,7 +23,7 @@ I am committed to addressing security vulnerabilities promptly and transparently
 
 ## Security Updates
 
-I will release security updates and patches as needed to address identified vulnerabilities. I encourage users to keep their installations of [Your Project Name] up-to-date to ensure they are protected against the latest known security risks.
+I will release security updates and patches as needed to address identified vulnerabilities. I encourage users to keep their installations of `Mercuri` up-to-date to ensure they are protected against the latest known security risks.
 
 ## Scope
 
