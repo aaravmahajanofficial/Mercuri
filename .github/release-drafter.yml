@@ -35,7 +35,7 @@ categories:
     labels:
       - dependencies
     collapse-after: 5
-    
+
 exclude-labels:
   - skip-changelog
   - invalid

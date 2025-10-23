@@ -7,8 +7,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this bug report!  
-        Please include as much detail as possible — API endpoint, logs, stack traces, etc.  
+        Thanks for taking the time to fill out this bug report!
+        Please include as much detail as possible — API endpoint, logs, stack traces, etc.
         This will help me reproduce and fix the problem quickly.
 
   - type: input
