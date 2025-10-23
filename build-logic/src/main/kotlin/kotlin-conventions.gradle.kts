@@ -32,9 +32,6 @@ kotlin {
 }
 
 dependencies {
-    implementation(gradleApi())
-    implementation(gradleKotlinDsl())
-    implementation(libs.findLibrary("kotlin-gradle-plugin").get())
     implementation(platform(libs.findLibrary("kotlin-bom").get()))
     compileOnly(libs.findLibrary("jetbrains-annotations").get())
 }
