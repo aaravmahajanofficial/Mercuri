@@ -1,9 +1,6 @@
-import gradle.kotlin.dsl.accessors._30bf93f98bd66cbbff05bf99e604665f.compileOnly
-import gradle.kotlin.dsl.accessors._30bf93f98bd66cbbff05bf99e604665f.implementation
 import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
-import org.jetbrains.kotlin.gradle.internal.config.AnalysisFlags.optIn
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
