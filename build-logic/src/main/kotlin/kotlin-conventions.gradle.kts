@@ -7,7 +7,6 @@ private val libs = extensions.getByType<VersionCatalogsExtension>().named("libs"
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(24)
-        vendor = JvmVendorSpec.AZUL
     }
 }
 
