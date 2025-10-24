@@ -13,16 +13,14 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-plugins {
-    base
-    id("kotlin-conventions")
-    id("quality-conventions")
-    alias(libs.plugins.kotlin.spring)
-    alias(libs.plugins.spring.boot)
-    alias(libs.plugins.spring.dependency.management)
-}
+package io.github.aaravmahajanofficial
 
-dependencies {
-    implementation("org.springframework.boot:spring-boot-starter")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
+
+@SpringBootApplication
+class Application
+
+fun main(args: Array<String>) {
+    runApplication<Application>(*args)
 }

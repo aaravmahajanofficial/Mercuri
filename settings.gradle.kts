@@ -15,6 +15,10 @@
  */
 pluginManagement {
     includeBuild("build-logic")
+    repositories {
+        maven { url = uri("https://repo.spring.io/snapshot") }
+        gradlePluginPortal()
+    }
 }
 
 plugins {
@@ -31,6 +35,7 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         mavenCentral()
+        maven { url = uri("https://repo.spring.io/snapshot") }
     }
 }
 

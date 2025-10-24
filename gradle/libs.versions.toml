@@ -1,14 +1,18 @@
 [versions]
 # Kotlin and Gradle
-kotlin = "2.2.21"
+kotlin = "2.2.20"
 kotlinLanguage = "2.2"
-jvmTarget = "25"
+jvmTarget = "24"
 jetbrains-annotations = "26.0.2-1"
 
 # Quality
-detekt = "1.23.8"
+detekt = "2.0.0-alpha.1"
 spotless = "8.0.0"
 ktlint = "1.7.1"
+
+# Spring Boot
+spring-boot = "4.0.0-SNAPSHOT"
+spring-dependency-management = "1.1.7"
 
 [libraries]
 # Kotlin and Gradle
@@ -16,11 +20,11 @@ kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
 
-# Quality
-detekt-gradle-plugin = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", version.ref = "detekt" }
-spotless-gradle-plugin = { module = "com.diffplug.spotless:com.diffplug.spotless.gradle.plugin", version.ref = "spotless" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin"}
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }
+detekt = { id = "dev.detekt", version.ref = "detekt" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
