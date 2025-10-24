@@ -15,5 +15,14 @@
  */
 plugins {
     base
+    id("kotlin-conventions")
     id("quality-conventions")
+    alias(libs.plugins.kotlin.spring)
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+}
+
+dependencies {
+    implementation("org.springframework.boot:spring-boot-starter")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
 }

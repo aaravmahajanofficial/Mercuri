@@ -13,29 +13,14 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-pluginManagement {
-    includeBuild("build-logic")
-    repositories {
-        maven { url = uri("https://repo.spring.io/snapshot") }
-        gradlePluginPortal()
-    }
-}
+package io.github.aaravmahajanofficial
 
-plugins {
-    id("org.danilopianini.gradle-pre-commit-git-hooks") version "2.1.3"
-}
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
 
-gitHooks {
-    commitMsg { conventionalCommits() }
-    createHooks()
-}
+@SpringBootApplication
+class Application
 
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        mavenCentral()
-        maven { url = uri("https://repo.spring.io/snapshot") }
-    }
+fun main(args: Array<String>) {
+    runApplication<Application>(*args)
 }
-
-rootProject.name = "Mercuri"

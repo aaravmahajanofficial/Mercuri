@@ -2,6 +2,18 @@ plugins {
     `kotlin-dsl`
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(24)
+    }
+}
+
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll("-Xjsr305=strict")
+    }
+}
+
 dependencies {
     implementation(plugin(libs.plugins.kotlin.jvm))
     implementation(plugin(libs.plugins.spotless))

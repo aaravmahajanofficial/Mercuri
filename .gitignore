@@ -1,37 +1,39 @@
-# IntelliJ IDEA
-.idea/
-*.iml
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
 *.iws
+*.iml
 *.ipr
 out/
+!**/src/main/**/out/
+!**/src/test/**/out/
 
-# Gradle
-.gradle/
-build/
-.kotlin/
-logs/
-*.log
-*.log.*
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
 
-# Spring Boot
-!**/src/main/**/application.properties
-!**/src/main/**/application.yml
-!**/src/main/**/application-*.properties
-!**/src/main/**/application-*.yml
+### VS Code ###
+.vscode/
 
-# Environment variables
-.env
-.env.*
-
-# Operating System Files
-.DS_Store
-Thumbs.db
-
-# Local Environment
-local.properties
-
-# Backup/Temporary Files
-*~
-*.bak
-*.swp
-.#*
+### Kotlin ###
+.kotlin
