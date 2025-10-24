@@ -1,26 +1,15 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
-
 plugins {
     `kotlin-dsl`
 }
 
-kotlin {
-    val kotlinVersion = libs.versions.kotlinLanguage
-    val jvmTargetVersion = libs.versions.jvmTarget
-
-    jvmToolchain {
-        languageVersion.set(jvmTargetVersion.map(JavaLanguageVersion::of))
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(24)
     }
+}
 
+kotlin {
     compilerOptions {
-        apiVersion.set(kotlinVersion.map(KotlinVersion::fromVersion))
-        languageVersion.set(kotlinVersion.map(KotlinVersion::fromVersion))
-        jvmTarget.set(jvmTargetVersion.map(JvmTarget::fromTarget))
-
-        allWarningsAsErrors.set(true)
-        progressiveMode.set(true)
-        optIn.add("kotlin.RequiresOptIn")
         freeCompilerArgs.addAll("-Xjsr305=strict")
     }
 }

@@ -2,7 +2,6 @@
 # Kotlin and Gradle
 kotlin = "2.2.20"
 kotlinLanguage = "2.2"
-jvmTarget = "24"
 jetbrains-annotations = "26.0.2-1"
 
 # Quality
