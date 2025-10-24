@@ -5,6 +5,7 @@ plugins {
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(24)
+        vendor = JvmVendorSpec.AZUL
     }
 }
 
