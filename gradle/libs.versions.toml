@@ -12,13 +12,14 @@ ktlint = "1.7.1"
 # Spring Boot
 spring-boot = "4.0.0-SNAPSHOT"
 spring-dependency-management = "1.1.7"
+kotlin-logging = "5.1.0"
 
 [libraries]
 # Kotlin and Gradle
 kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
-
+kotlin-logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlin-logging"}
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
