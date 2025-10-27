@@ -22,12 +22,13 @@ services:
     container_name: postgres_admin
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: aaravmahajan2003@gmail.com
+      PGADMIN_DEFAULT_EMAIL: admin@mercuri.com
       PGADMIN_DEFAULT_PASSWORD: mercuri_admin
     ports:
       - "5050:80"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:
