@@ -1,16 +1,17 @@
 services:
   postgres:
-    image: postgres:18
+    image: postgres
     container_name: postgres_database
     restart: unless-stopped
     environment:
       POSTGRES_USER: mercuri_user
       POSTGRES_PASSWORD: mercuri_pass
       POSTGRES_DB: mercuri_db
+      LANG: en_US.utf8
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U mercuri_user -d mercuri_db" ]
       interval: 5s
