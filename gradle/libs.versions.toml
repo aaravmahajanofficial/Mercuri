@@ -10,7 +10,7 @@ spotless = "8.0.0"
 ktlint = "1.7.1"
 
 # Spring Boot
-spring-boot = "4.0.0-SNAPSHOT"
+spring-boot = "3.5.7"
 spring-dependency-management = "1.1.7"
 kotlin-logging = "5.1.0"
 
