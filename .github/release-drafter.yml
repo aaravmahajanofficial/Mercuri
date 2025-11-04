@@ -70,3 +70,6 @@ autolabeler:
     branch:
       - '/feat\/.+/'
       - '/feature\/.+/'
+  - label: 'chore'
+    branch:
+      - '/chore\/.+/'
