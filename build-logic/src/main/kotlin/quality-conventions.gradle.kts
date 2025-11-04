@@ -34,7 +34,11 @@ configure<SpotlessExtension> {
     kotlin {
         target("**/*.kt")
         targetExclude(commonExcludes)
-        ktlint(ktlintVersion).setEditorConfigPath(editorConfig)
+        ktlint(ktlintVersion).setEditorConfigPath(editorConfig).editorConfigOverride(
+            mapOf(
+                "ktlint_annotation_handle_annotations_with_parameters_same_as_annotations_without_parameters" to "disabled",
+            )
+        )
         trimTrailingWhitespace()
         endWithNewline()
         licenseHeaderFile(headerFile)
@@ -76,7 +80,7 @@ configure<DetektExtension> {
     toolVersion = libs.findVersion("detekt").get().requiredVersion
     parallel = true
     buildUponDefaultConfig = true
-    if(detektConfig.asFile.exists()) {
+    if (detektConfig.asFile.exists()) {
         config.setFrom(detektConfig)
     }
     baseline = detektBaseline
