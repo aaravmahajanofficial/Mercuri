@@ -19,8 +19,6 @@ import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import org.hibernate.annotations.CreationTimestamp
@@ -29,7 +27,7 @@ import org.hibernate.annotations.UuidGenerator
 import java.time.Instant
 import java.util.UUID
 
-@SuppressWarnings("LongParameterList")
+@Suppress("LongParameterList")
 @Entity
 @Table(name = "users")
 class User(
@@ -72,7 +70,7 @@ class User(
     @Column(name = "updated_at", columnDefinition = "TIMESTAMPTZ", nullable = false)
     var updatedAt: Instant? = null,
 
-    @Id @GeneratedValue(strategy = GenerationType.UUID)
+    @Id
     @UuidGenerator(style = UuidGenerator.Style.TIME)
     @Column(columnDefinition = "UUID", nullable = false, updatable = false)
     var id: UUID? = null,
