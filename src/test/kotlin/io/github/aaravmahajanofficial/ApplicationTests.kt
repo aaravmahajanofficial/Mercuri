@@ -17,9 +17,33 @@ package io.github.aaravmahajanofficial
 
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
+import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.junit.jupiter.Container
+import org.testcontainers.junit.jupiter.Testcontainers
 
+@Testcontainers
 @SpringBootTest
 class ApplicationTests {
+
+    companion object {
+        @Container
+        val postgres = PostgreSQLContainer<Nothing>("postgres:18").apply {
+            withDatabaseName("mercuri_db")
+            withUsername("mercuri_user")
+            withPassword("mercuri_pass")
+        }
+
+        @JvmStatic
+        @DynamicPropertySource
+        fun registerProperties(registry: DynamicPropertyRegistry) {
+            registry.add("spring.datasource.url", postgres::getJdbcUrl)
+            registry.add("spring.datasouce.user", postgres::getUsername)
+            registry.add("spring.datasouce.password", postgres::getPassword)
+        }
+    }
+
     @Test
     fun contextLoads() {
     }
