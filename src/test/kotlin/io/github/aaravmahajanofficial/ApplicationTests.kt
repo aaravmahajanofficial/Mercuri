@@ -39,8 +39,8 @@ class ApplicationTests {
         @DynamicPropertySource
         fun registerProperties(registry: DynamicPropertyRegistry) {
             registry.add("spring.datasource.url", postgres::getJdbcUrl)
-            registry.add("spring.datasouce.user", postgres::getUsername)
-            registry.add("spring.datasouce.password", postgres::getPassword)
+            registry.add("spring.datasource.username", postgres::getUsername)
+            registry.add("spring.datasource.password", postgres::getPassword)
         }
     }
 
