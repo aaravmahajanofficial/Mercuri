@@ -19,15 +19,14 @@ plugins {
     id("quality-conventions")
     alias(libs.plugins.kotlin.spring)
     alias(libs.plugins.spring.boot)
-    alias(libs.plugins.kotlin.jpa)
-    alias(libs.plugins.kotlin.allopen)
     alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.kotlin.jpa)
 }
 
 allOpen {
     annotation("jakarta.persistence.Entity")
-    annotation("jakarta.persistence.Embeddable")
     annotation("jakarta.persistence.MappedSuperclass")
+    annotation("jakarta.persistence.Embeddable")
 }
 
 dependencies {
