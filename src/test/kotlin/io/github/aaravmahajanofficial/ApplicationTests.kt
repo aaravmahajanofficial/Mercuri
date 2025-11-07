@@ -29,7 +29,7 @@ class ApplicationTests {
 
     companion object {
         @Container
-        val postgres = PostgreSQLContainer<Nothing>("postgres:18").apply {
+        val postgres = PostgreSQLContainer<Nothing>("postgres:18-alpine").apply {
             withDatabaseName("mercuri_db")
             withUsername("mercuri_user")
             withPassword("mercuri_pass")
