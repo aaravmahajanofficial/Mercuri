@@ -45,6 +45,5 @@ class ApplicationTests {
     }
 
     @Test
-    fun contextLoads() {
-    }
+    fun contextLoads() {}
 }

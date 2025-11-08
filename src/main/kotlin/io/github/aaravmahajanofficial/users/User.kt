@@ -15,22 +15,19 @@
  */
 package io.github.aaravmahajanofficial.users
 
+import io.github.aaravmahajanofficial.common.BaseEntity
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
-import jakarta.persistence.FetchType
-import jakarta.persistence.Id
 import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
 import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
-import org.hibernate.annotations.UuidGenerator
 import java.time.Instant
-import java.util.UUID
 
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "ktlint:standard:backing-property-naming")
 @Entity
 @Table(name = "users")
 class User(
@@ -73,39 +70,37 @@ class User(
     @Column(name = "updated_at", columnDefinition = "TIMESTAMPTZ", nullable = false)
     var updatedAt: Instant? = null,
 
-    @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.LAZY)
-    var roles: MutableSet<UserRole> = mutableSetOf(),
+) : BaseEntity() {
 
-    @Id
-    @UuidGenerator(style = UuidGenerator.Style.TIME)
-    @Column(columnDefinition = "UUID", nullable = false, updatable = false)
-    var id: UUID? = null,
-) {
+    @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true)
+    protected var _roles: MutableSet<UserRole> = mutableSetOf()
+    val roles: Set<UserRole> get() = _roles
+
+    @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true)
+    protected var _addresses: MutableSet<UserAddress> = mutableSetOf()
+    val addresses: Set<UserAddress> get() = _addresses
 
     fun fullName(): String = listOf(firstName, lastName).joinToString(" ").ifBlank { username }
 
     fun addRole(role: UserRole) {
-        roles.add(role)
+        _roles.add(role)
         role.user = this
     }
 
     fun removeRole(role: UserRole) {
-        roles.remove(role)
+        _roles.remove(role)
         role.user = null
     }
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true // checking the same instance eg: println(u1.equals(u1))
-        // val u1 = User(), val u2 = User() => if "exactly" same runtime class (no subclass/proxy), check ids
-        if (other == null || this::class != other::class) return false
-        other as User
-        return id != null && id == other.id
+    fun addAddress(address: UserAddress) {
+        _addresses.add(address)
+        address.user = this
     }
 
-    // val u1 = User(), val u2 = User()
-    // val set = mutableSetOf(u1)
-    // Kotlin by default, checks the memory addresses (which are unique), so would return u1 != u2
-    override fun hashCode(): Int = id?.hashCode() ?: 0
+    fun removeAddress(address: UserAddress) {
+        _addresses.remove(address)
+        address.user = null
+    }
 
     override fun toString(): String = "User(id=$id, email=$email, username=$username, status=$status)"
 }
