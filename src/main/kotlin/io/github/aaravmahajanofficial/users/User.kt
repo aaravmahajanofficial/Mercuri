@@ -73,8 +73,11 @@ class User(
     @Column(name = "updated_at", columnDefinition = "TIMESTAMPTZ", nullable = false)
     var updatedAt: Instant? = null,
 
-    @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true)
     var roles: MutableSet<UserRole> = mutableSetOf(),
+
+    @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true)
+    var addresses: MutableSet<UserAddress> = mutableSetOf(),
 
     @Id
     @UuidGenerator(style = UuidGenerator.Style.TIME)
@@ -92,6 +95,16 @@ class User(
     fun removeRole(role: UserRole) {
         roles.remove(role)
         role.user = null
+    }
+
+    fun addAddress(address: UserAddress) {
+        addresses.add(address)
+        address.user = this
+    }
+
+    fun removeAddress(address: UserAddress) {
+        addresses.remove(address)
+        address.user = null
     }
 
     override fun toString(): String = "User(id=$id, email=$email, username=$username, status=$status)"
