@@ -1,0 +1,86 @@
+/*
+ * Copyright 2025 Aarav Mahajan
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+package io.github.aaravmahajanofficial.users
+
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
+import jakarta.persistence.ForeignKey
+import jakarta.persistence.Id
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
+import jakarta.persistence.Table
+import org.hibernate.annotations.CurrentTimestamp
+import org.hibernate.annotations.UpdateTimestamp
+import org.hibernate.annotations.UuidGenerator
+import java.time.Instant
+import java.util.UUID
+
+@Suppress("LongParameterList")
+@Entity
+@Table(name = "user_addresses")
+class UserAddress(
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    var addressType: AddressType,
+
+    @Column(name = "full_name", nullable = false, length = 200)
+    var fullName: String,
+
+    @Column(name = "phone_number", nullable = false, length = 20)
+    var phoneNumber: String,
+
+    @Column(name = "address_line1", nullable = false)
+    var addressLine1: String,
+
+    @Column(name = "address_line2")
+    var addressLine2: String,
+
+    @Column(nullable = false, length = 100)
+    var city: String,
+
+    @Column(nullable = false, length = 100)
+    var state: String,
+
+    @Column(name = "postal_code", nullable = false, length = 20)
+    var postalCode: String,
+
+    @Column(nullable = false, length = 100)
+    var country: String,
+
+    @Column(name = "is_default")
+    var isDefault: Boolean = false,
+
+    @CurrentTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "TIMESTAMPTZ")
+    var createdAt: Instant,
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false, columnDefinition = "TIMESTAMPTZ")
+    var updatedAt: Instant,
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = ForeignKey(name = "user_user_address"))
+    var user: User? = null,
+
+    @Id
+    @UuidGenerator(style = UuidGenerator.Style.TIME)
+    @Column(columnDefinition = "UUID", nullable = false, updatable = false)
+    var id: UUID? = null,
+
+)
