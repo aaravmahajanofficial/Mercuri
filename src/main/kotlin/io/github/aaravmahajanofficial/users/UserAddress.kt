@@ -15,10 +15,12 @@
  */
 package io.github.aaravmahajanofficial.users
 
+import io.github.aaravmahajanofficial.common.BaseEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
+import jakarta.persistence.FetchType
 import jakarta.persistence.ForeignKey
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
@@ -74,13 +76,12 @@ class UserAddress(
     @Column(name = "updated_at", nullable = false, columnDefinition = "TIMESTAMPTZ")
     var updatedAt: Instant,
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, foreignKey = ForeignKey(name = "user_user_address"))
     var user: User? = null,
 
-    @Id
-    @UuidGenerator(style = UuidGenerator.Style.TIME)
-    @Column(columnDefinition = "UUID", nullable = false, updatable = false)
-    var id: UUID? = null,
+) : BaseEntity() {
 
-)
+    override fun toString(): String =
+        "UserAddress(id=$id, fullName=$fullName, city=$city, state=$state, postalCode=$postalCode)"
+}
