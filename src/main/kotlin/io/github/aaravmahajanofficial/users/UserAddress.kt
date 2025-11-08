@@ -22,15 +22,14 @@ import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.ForeignKey
-import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import org.hibernate.annotations.CurrentTimestamp
+import org.hibernate.annotations.OnDelete
+import org.hibernate.annotations.OnDeleteAction
 import org.hibernate.annotations.UpdateTimestamp
-import org.hibernate.annotations.UuidGenerator
 import java.time.Instant
-import java.util.UUID
 
 @Suppress("LongParameterList")
 @Entity
@@ -65,19 +64,20 @@ class UserAddress(
     @Column(nullable = false, length = 100)
     var country: String,
 
-    @Column(name = "is_default")
+    @Column(name = "is_default", nullable = false)
     var isDefault: Boolean = false,
 
     @CurrentTimestamp
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "TIMESTAMPTZ")
-    var createdAt: Instant,
+    var createdAt: Instant? = null,
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false, columnDefinition = "TIMESTAMPTZ")
-    var updatedAt: Instant,
+    var updatedAt: Instant? = null,
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, foreignKey = ForeignKey(name = "user_user_address"))
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = ForeignKey(name = "fk_user_addresses_user_id"))
+    @OnDelete(action = OnDeleteAction.CASCADE)
     var user: User? = null,
 
 ) : BaseEntity() {
