@@ -2,7 +2,7 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>EmptyFunctionBlock:ApplicationTests.kt:ApplicationTests${}</ID>
+    <ID>EmptyFunctionBlock:ApplicationTests.kt:ApplicationTests${ }</ID>
     <ID>ProtectedMemberInFinalClass:User.kt:User$@OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true) protected var _addresses: MutableSet&lt;UserAddress&gt; = mutableSetOf()</ID>
     <ID>ProtectedMemberInFinalClass:User.kt:User$@OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true) protected var _roles: MutableSet&lt;UserRole&gt; = mutableSetOf()</ID>
     <ID>VariableNaming:User.kt:User$@OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true) protected var _addresses: MutableSet&lt;UserAddress&gt; = mutableSetOf()</ID>
