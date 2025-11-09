@@ -1,7 +1,6 @@
 [versions]
 # Kotlin and Gradle
 kotlin = "2.2.20"
-kotlinLanguage = "2.2"
 jetbrains-annotations = "26.0.2-1"
 
 # Quality
@@ -12,7 +11,13 @@ ktlint = "1.7.1"
 # Spring Boot
 spring-boot = "3.5.7"
 spring-dependency-management = "1.1.7"
+
+# Observability
 kotlin-logging = "5.1.0"
+
+# Testing
+mockk = "1.14.6"
+kotest = "6.1"
 
 [libraries]
 # Kotlin and Gradle
@@ -25,7 +30,15 @@ kotlin-logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = 
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
 kotlin-jpa = { id = "org.jetbrains.kotlin.plugin.jpa", version.ref = "kotlin" }
+
+# Spring Boot
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
 spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }
+
+# Quality
 detekt = { id = "dev.detekt", version.ref = "detekt" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+
+# Testing
+mockk = { id = "io.mockk:mockk", version.ref = "mockk" }
+kotest = { id = "io.kotest:kotest-assertions-core", version.ref = "kotest"}
