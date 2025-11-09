@@ -17,8 +17,7 @@ package io.github.aaravmahajanofficial
 
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -29,21 +28,11 @@ class ApplicationTests {
 
     companion object {
         @Container
-        val postgres = PostgreSQLContainer<Nothing>("postgres:18-alpine").apply {
-            withDatabaseName("mercuri_db")
-            withUsername("mercuri_user")
-            withPassword("mercuri_pass")
-        }
-
-        @JvmStatic
-        @DynamicPropertySource
-        fun registerProperties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.datasource.url", postgres::getJdbcUrl)
-            registry.add("spring.datasource.username", postgres::getUsername)
-            registry.add("spring.datasource.password", postgres::getPassword)
-        }
+        @ServiceConnection
+        val postgres = PostgreSQLContainer<Nothing>("postgres:18-alpine")
     }
 
     @Test
-    fun contextLoads() {}
+    fun contextLoads() {
+    }
 }
