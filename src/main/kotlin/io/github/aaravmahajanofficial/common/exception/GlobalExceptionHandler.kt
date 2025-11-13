@@ -51,7 +51,7 @@ class GlobalExceptionHandler {
             .body(
                 ApiResponse.error(
                     "INTERNAL_SERVER_ERROR",
-                    mapOf("error" to "An unexpected error occured"),
+                    mapOf("error" to "An unexpected error occurred"),
                     request.requestURI,
                 ),
             )
