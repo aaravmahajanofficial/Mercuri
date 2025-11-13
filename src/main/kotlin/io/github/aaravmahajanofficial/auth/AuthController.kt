@@ -18,14 +18,12 @@ package io.github.aaravmahajanofficial.auth
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
 import io.github.aaravmahajanofficial.common.ApiResponse
-import io.github.aaravmahajanofficial.common.Meta
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import java.time.Instant
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -33,17 +31,11 @@ class AuthController(private val authService: AuthService) {
 
     @PostMapping("/register")
     fun register(@RequestBody requestBody: RegisterRequestDto): ResponseEntity<ApiResponse<RegisterResponseDto>> {
-        val responseData = authService.register(requestBody)
-
-        val meta = Meta(
-            timeStamp = Instant.now(),
+        val result = authService.register(requestBody)
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+            ApiResponse(
+                data = result,
+            ),
         )
-
-        val response = ApiResponse(
-            data = responseData,
-            meta = meta,
-        )
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 }

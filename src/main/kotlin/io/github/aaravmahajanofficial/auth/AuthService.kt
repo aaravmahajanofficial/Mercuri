@@ -15,10 +15,11 @@
  */
 package io.github.aaravmahajanofficial.auth
 
+import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
 import org.springframework.stereotype.Service
 
 @Service
 class AuthService {
-    fun register(any: Any): RegisterResponseDto = TODO()
+    fun register(requestBody: RegisterRequestDto): RegisterResponseDto = TODO()
 }

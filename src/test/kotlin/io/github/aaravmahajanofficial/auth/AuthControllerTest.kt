@@ -19,29 +19,26 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
 import io.github.aaravmahajanofficial.users.RoleType
+import org.hamcrest.CoreMatchers.hasItem
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.check
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.test.web.servlet.post
 import java.time.Instant
 import java.util.UUID
+import kotlin.test.assertEquals
 
 @WebMvcTest(AuthController::class)
-class AuthControllerTest @Autowired constructor(
-    val mockMvc: MockMvc,
+class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val objectMapper: ObjectMapper) {
     @MockitoBean
-    val authService: AuthService,
-) {
-    @Autowired
-    lateinit var objectMapper: ObjectMapper
+    lateinit var authService: AuthService
 
     @Test
     fun `should return 201 Created with user details`() {
@@ -68,26 +65,35 @@ class AuthControllerTest @Autowired constructor(
 
         whenever(authService.register(any())).thenReturn(serviceResponse)
 
-        // When
-        val result = mockMvc.perform(
-            post("/api/v1/auth/register")
-                .contentType(APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request))
-                .accept(APPLICATION_JSON),
-        )
+        // When & Then
+        mockMvc.post("/api/v1/auth/register") {
+            contentType = APPLICATION_JSON
+            content = objectMapper.writeValueAsString(request)
+            accept = APPLICATION_JSON
+        }.andExpect {
+            status { isCreated() }
+            content { contentTypeCompatibleWith(APPLICATION_JSON) }
+            jsonPath("$.data.id") { value(serviceResponse.id.toString()) }
+            jsonPath("$.data.email") { value(serviceResponse.email) }
+            jsonPath("$.data.username") { value(serviceResponse.username) }
+            jsonPath("$.data.phoneNumber") { value(serviceResponse.phoneNumber) }
+            jsonPath("$.data.status") { value(serviceResponse.status.value) }
+            jsonPath("$.data.emailVerified") { value(serviceResponse.emailVerified) }
+            jsonPath("$.data.roles") { value(hasItem(RoleType.CUSTOMER.value)) }
+            jsonPath("$.meta.timeStamp") { exists() }
+            jsonPath("$.data.createdAt") { exists() }
+        }
 
-        // Then
-        result
-            .andExpect(status().isCreated)
-            .andExpect(content().contentType(APPLICATION_JSON))
-            .andExpect(jsonPath("$.data.id").value(serviceResponse.id.toString()))
-            .andExpect(jsonPath("$.data.email").value(serviceResponse.email))
-            .andExpect(jsonPath("$.data.username").value(serviceResponse.username))
-            .andExpect(jsonPath("$.data.phoneNumber").value(serviceResponse.phoneNumber))
-            .andExpect(jsonPath("$.data.status").value(serviceResponse.status.value))
-            .andExpect(jsonPath("$.data.emailVerified").value(serviceResponse.emailVerified))
-            .andExpect(jsonPath("$.data.roles[0]").value(serviceResponse.roles[0].value))
-            .andExpect(jsonPath("$.data.createdAt").value(serviceResponse.createdAt.toString()))
-            .andExpect(jsonPath("$.meta.timeStamp").exists())
+        // to verify if the input sent to the service method is correct
+        verify(authService).register(
+            check { capturedDto ->
+                assertEquals(request.email, capturedDto.email)
+                assertEquals(request.username, capturedDto.username)
+                assertEquals(request.password, capturedDto.password)
+                assertEquals(request.firstName, capturedDto.firstName)
+                assertEquals(request.lastName, capturedDto.lastName)
+                assertEquals(request.phoneNumber, capturedDto.phoneNumber)
+            },
+        )
     }
 }
