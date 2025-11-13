@@ -21,6 +21,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     testImplementation(libs.findLibrary("mockk").get())
     testImplementation(libs.findLibrary("kotest").get())
+    testImplementation(libs.findLibrary("mockito-kotlin").get())
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     compileOnly(libs.findLibrary("jetbrains-annotations").get())

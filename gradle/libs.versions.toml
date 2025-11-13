@@ -18,6 +18,7 @@ kotlin-logging = "5.1.0"
 # Testing
 mockk = "1.14.6"
 kotest = "6.0.4"
+mockito-kotlin = "6.1.0"
 
 [libraries]
 # Kotlin and Gradle
@@ -29,6 +30,7 @@ kotlin-logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = 
 # Testing
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 kotest = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin"}
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
