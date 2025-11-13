@@ -19,10 +19,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
 import io.github.aaravmahajanofficial.users.RoleType
+import io.kotest.matchers.file.exist
 import org.hamcrest.CoreMatchers.hasItem
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.check
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
@@ -95,5 +97,32 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
                 assertEquals(request.phoneNumber, capturedDto.phoneNumber)
             },
         )
+    }
+
+    @Test
+    fun `should return 400 Bad Request for invalid email`() {
+        // Given
+        val request = RegisterRequestDto(
+            email = "invalid_email",
+            username = "john_doe_123",
+            password = "SecureP@ss123",
+            firstName = "John",
+            lastName = "Doe",
+            phoneNumber = "+1234567890",
+        )
+
+        // When & Then
+        mockMvc.post("/api/v1/auth/register") {
+            contentType = APPLICATION_JSON
+            content = objectMapper.writeValueAsString(request)
+            accept = APPLICATION_JSON
+        }.andExpect {
+            status { isBadRequest() }
+            jsonPath("$.error.code") { value("VALIDATION_FAILED") }
+            jsonPath("$.error.details.email") { exist() }
+            jsonPath("$.error.path") { exists() }
+        }
+
+        verify(authService, never()).register(any())
     }
 }
