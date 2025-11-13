@@ -19,7 +19,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
 import io.github.aaravmahajanofficial.users.RoleType
-import io.kotest.matchers.file.exist
 import org.hamcrest.CoreMatchers.hasItem
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -100,15 +99,15 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
     }
 
     @Test
-    fun `should return 400 Bad Request for invalid email`() {
+    fun `should return 400 Bad Request with all validation errors for an empty request`() {
         // Given
         val request = RegisterRequestDto(
             email = "invalid_email",
-            username = "john_doe_123",
-            password = "SecureP@ss123",
-            firstName = "John",
-            lastName = "Doe",
-            phoneNumber = "+1234567890",
+            username = "",
+            password = "invalid",
+            firstName = "",
+            lastName = "",
+            phoneNumber = "abc",
         )
 
         // When & Then
@@ -119,7 +118,14 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
         }.andExpect {
             status { isBadRequest() }
             jsonPath("$.error.code") { value("VALIDATION_FAILED") }
-            jsonPath("$.error.details.email") { exist() }
+            jsonPath("$.meta.timeStamp") { exists() }
+
+            jsonPath("$.error.details.email") { exists() }
+            jsonPath("$.error.details.username") { exists() }
+            jsonPath("$.error.details.password") { exists() }
+            jsonPath("$.error.details.firstName") { exists() }
+            jsonPath("$.error.details.lastName") { exists() }
+            jsonPath("$.error.details.phoneNumber") { exists() }
             jsonPath("$.error.path") { exists() }
         }
 
