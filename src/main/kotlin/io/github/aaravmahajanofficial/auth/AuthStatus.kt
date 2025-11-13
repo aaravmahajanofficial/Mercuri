@@ -20,7 +20,7 @@ import com.fasterxml.jackson.annotation.JsonValue
 enum class AuthStatus(@get:JsonValue val value: String) {
     PENDING_VERIFICATION("pending_verification"),
     VERIFIED("verified"),
-    MFA_REQUIRED("mfa_verified"),
+    MFA_REQUIRED("mfa_required"),
     ACTIVE_SESSION("active_session"),
     LOCKED("locked"),
 }

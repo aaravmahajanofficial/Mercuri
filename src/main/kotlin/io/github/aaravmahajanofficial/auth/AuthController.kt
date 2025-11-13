@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.time.Instant
 
 @RestController
-@RequestMapping("api/v1/auth")
+@RequestMapping("/api/v1/auth")
 class AuthController(private val authService: AuthService) {
 
     @PostMapping("/register")
