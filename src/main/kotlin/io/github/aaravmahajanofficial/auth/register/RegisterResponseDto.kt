@@ -13,13 +13,20 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.users
+package io.github.aaravmahajanofficial.auth.register
 
-import com.fasterxml.jackson.annotation.JsonValue
+import io.github.aaravmahajanofficial.auth.AuthStatus
+import io.github.aaravmahajanofficial.users.RoleType
+import java.time.Instant
+import java.util.UUID
 
-enum class RoleType(@get:JsonValue val value: String) {
-    CUSTOMER("customer"),
-    SELLER("seller"),
-    ADMIN("admin"),
-    SUPER_ADMIN("super_admin"),
-}
+data class RegisterResponseDto(
+    val id: UUID,
+    val email: String,
+    val username: String,
+    val phoneNumber: String,
+    val status: AuthStatus,
+    val emailVerified: Boolean,
+    val createdAt: Instant,
+    val roles: List<RoleType>,
+)

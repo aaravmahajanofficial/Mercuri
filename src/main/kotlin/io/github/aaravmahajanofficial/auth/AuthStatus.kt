@@ -13,13 +13,14 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.users
+package io.github.aaravmahajanofficial.auth
 
 import com.fasterxml.jackson.annotation.JsonValue
 
-enum class RoleType(@get:JsonValue val value: String) {
-    CUSTOMER("customer"),
-    SELLER("seller"),
-    ADMIN("admin"),
-    SUPER_ADMIN("super_admin"),
+enum class AuthStatus(@get:JsonValue val value: String) {
+    PENDING_VERIFICATION("pending_verification"),
+    VERIFIED("verified"),
+    MFA_REQUIRED("mfa_verified"),
+    ACTIVE_SESSION("active_session"),
+    LOCKED("locked"),
 }

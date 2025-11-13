@@ -13,13 +13,12 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.users
+package io.github.aaravmahajanofficial.auth
 
-import com.fasterxml.jackson.annotation.JsonValue
+import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
+import org.springframework.stereotype.Service
 
-enum class RoleType(@get:JsonValue val value: String) {
-    CUSTOMER("customer"),
-    SELLER("seller"),
-    ADMIN("admin"),
-    SUPER_ADMIN("super_admin"),
+@Service
+class AuthService {
+    fun register(any: Any): RegisterResponseDto = TODO()
 }

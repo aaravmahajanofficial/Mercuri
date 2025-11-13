@@ -13,13 +13,10 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.users
+package io.github.aaravmahajanofficial.common
 
-import com.fasterxml.jackson.annotation.JsonValue
+import java.time.Instant
 
-enum class RoleType(@get:JsonValue val value: String) {
-    CUSTOMER("customer"),
-    SELLER("seller"),
-    ADMIN("admin"),
-    SUPER_ADMIN("super_admin"),
-}
+data class ApiResponse<T>(val data: T, val meta: Meta)
+
+data class Meta(val timeStamp: Instant)
