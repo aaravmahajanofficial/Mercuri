@@ -233,7 +233,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
     }
 
     @Test
-    fun `should return 500 Server Error when for unexpected failure`() {
+    fun `should return 500 Server Error when unexpected failure occurs`() {
         // Given
         val request = RegisterRequestDto(
             email = "john.doe@example.com",
