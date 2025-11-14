@@ -21,7 +21,7 @@ data class ApiResponse<T>(val data: T, val meta: Meta, val error: ErrorDetails? 
 
     data class Meta(val timeStamp: Instant = Instant.now())
 
-    data class ErrorDetails(val code: String, val details: Map<String, String>? = null, val path: String)
+    data class ErrorDetails(val code: String, val details: Map<String, String>? = null)
 
     companion object {
         fun <T> success(data: T): ApiResponse<T> = ApiResponse(
@@ -29,10 +29,10 @@ data class ApiResponse<T>(val data: T, val meta: Meta, val error: ErrorDetails? 
             meta = Meta(),
         )
 
-        fun error(code: String, details: Map<String, String>?, path: String): ApiResponse<Nothing?> = ApiResponse(
+        fun error(code: String, details: Map<String, String>?): ApiResponse<Nothing?> = ApiResponse(
             data = null,
             meta = Meta(),
-            error = ErrorDetails(code, details, path),
+            error = ErrorDetails(code, details),
         )
     }
 }

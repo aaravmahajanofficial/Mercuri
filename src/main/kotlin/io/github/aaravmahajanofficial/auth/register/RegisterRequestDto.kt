@@ -47,7 +47,7 @@ data class RegisterRequestDto(
 
     @NotBlank(message = "Last name is required")
     @Size(min = 1, max = 50)
-    @Pattern(regexp = "^[A-Za-z\\\\s'-]+$", message = "Last name contains invalid characters")
+    @Pattern(regexp = "^[A-Za-z\\s'-]+$", message = "Last name contains invalid characters")
     val lastName: String,
 
     @NotBlank(message = "Phone number is required")
