@@ -17,7 +17,7 @@ package io.github.aaravmahajanofficial.common
 
 import java.time.Instant
 
-data class ApiResponse<T>(val data: T, val meta: Meta, val error: ErrorDetails? = null) {
+data class ApiResponse<T>(val data: T, val meta: Meta = Meta(), val error: ErrorDetails? = null) {
 
     data class Meta(val timeStamp: Instant = Instant.now())
 

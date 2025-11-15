@@ -90,7 +90,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
             jsonPath("$.data.phoneNumber") { value(serviceResponse.phoneNumber) }
             jsonPath("$.data.status") { value(serviceResponse.status.value) }
             jsonPath("$.data.emailVerified") { value(serviceResponse.emailVerified) }
-            jsonPath("$.data.roles") { value(hasItem(RoleType.CUSTOMER.value)) }
+            jsonPath("$.data.roles") { value(hasItem(RoleType.CUSTOMER.name)) }
             jsonPath("$.meta.timeStamp") { exists() }
             jsonPath("$.data.createdAt") { exists() }
         }
