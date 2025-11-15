@@ -47,17 +47,21 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
     @MockitoBean
     lateinit var authService: AuthService
 
+    companion object {
+        fun createValidRegisterRequest(
+            email: String = "john.doe@example.com",
+            username: String = "john_doe_123",
+            password: String = "SecureP@ss123",
+            firstName: String = "John",
+            lastName: String = "Doe",
+            phoneNumber: String = "+1234567890",
+        ) = RegisterRequestDto(email, username, password, firstName, lastName, phoneNumber)
+    }
+
     @Test
     fun `should return 201 Created with user details`() {
         // Given
-        val request = RegisterRequestDto(
-            email = "john.doe@example.com",
-            username = "john_doe_123",
-            password = "SecureP@ss123",
-            firstName = "John",
-            lastName = "Doe",
-            phoneNumber = "+1234567890",
-        )
+        val request = createValidRegisterRequest()
 
         val serviceResponse = RegisterResponseDto(
             id = UUID.randomUUID(),
@@ -157,14 +161,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
     @Test
     fun `should return 415 Unsupported Media Type for non-JSON request`() {
         // Given
-        val request = RegisterRequestDto(
-            email = "john.doe@example.com",
-            username = "john_doe_123",
-            password = "SecureP@ss123",
-            firstName = "John",
-            lastName = "Doe",
-            phoneNumber = "+1234567890",
-        )
+        val request = createValidRegisterRequest()
 
         // When & Then
         mockMvc.post("/api/v1/auth/register") {
@@ -184,14 +181,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
     @Test
     fun `should return 409 Conflict when email already exists`() {
         // Given
-        val request = RegisterRequestDto(
-            email = "john.doe@example.com",
-            username = "john_doe_123",
-            password = "SecureP@ss123",
-            firstName = "John",
-            lastName = "Doe",
-            phoneNumber = "+1234567890",
-        )
+        val request = createValidRegisterRequest()
 
         whenever(authService.register(any())).thenThrow(ResourceConflictException("Email already in use"))
 
@@ -237,14 +227,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
     @Test
     fun `should return 500 Server Error when unexpected failure occurs`() {
         // Given
-        val request = RegisterRequestDto(
-            email = "john.doe@example.com",
-            username = "john_doe_123",
-            password = "SecureP@ss123",
-            firstName = "John",
-            lastName = "Doe",
-            phoneNumber = "+1234567890",
-        )
+        val request = createValidRegisterRequest()
 
         whenever(authService.register(any())).thenThrow(RuntimeException("Unexpected connection failure"))
 
