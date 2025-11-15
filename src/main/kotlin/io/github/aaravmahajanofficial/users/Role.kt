@@ -15,15 +15,13 @@
  */
 package io.github.aaravmahajanofficial.users
 
+import io.github.aaravmahajanofficial.common.BaseEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
-import jakarta.persistence.Id
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
-import org.hibernate.annotations.UuidGenerator
-import java.util.UUID
 
 @Entity
 @Table(
@@ -40,9 +38,4 @@ class Role(
     @Enumerated(EnumType.STRING)
     @Column(unique = true, nullable = false, length = 50)
     var name: RoleType,
-
-    @Id
-    @UuidGenerator(style = UuidGenerator.Style.TIME)
-    @Column(columnDefinition = "UUID", nullable = false, updatable = false)
-    var id: UUID? = null,
-)
+) : BaseEntity()
