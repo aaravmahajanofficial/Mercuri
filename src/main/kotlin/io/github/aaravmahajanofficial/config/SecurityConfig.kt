@@ -23,6 +23,10 @@ import org.springframework.security.crypto.password.PasswordEncoder
 @Configuration
 class SecurityConfig {
 
+    companion object {
+        private const val BCRYPT_STRENGTH = 12
+    }
+
     @Bean
-    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
+    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder(BCRYPT_STRENGTH)
 }

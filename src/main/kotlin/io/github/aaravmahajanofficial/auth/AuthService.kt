@@ -39,10 +39,10 @@ class AuthService(
 
     fun register(requestBody: RegisterRequestDto): RegisterResponseDto {
         if (userRepository.findByEmail(requestBody.email) != null) {
-            throw UserAlreadyExistsException("User with email ${requestBody.email} already exists")
+            throw UserAlreadyExistsException("User with provided credentials already exists")
         }
         if (userRepository.findByUsername(requestBody.username) != null) {
-            throw UserAlreadyExistsException("User with username ${requestBody.username} already exists")
+            throw UserAlreadyExistsException("User with provided credentials already exists")
         }
 
         val customerRole = roleRepository.findByName(RoleType.CUSTOMER)

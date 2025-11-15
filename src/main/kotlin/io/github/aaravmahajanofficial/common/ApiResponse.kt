@@ -17,22 +17,19 @@ package io.github.aaravmahajanofficial.common
 
 import java.time.Instant
 
-data class ApiResponse<T>(val data: T, val meta: Meta = Meta(), val error: ErrorDetails? = null) {
+sealed class ApiResponse<out T> {
+
+    data class Success<T>(val data: T, val meta: Meta = Meta()) : ApiResponse<T>()
+    data class Error(val error: ErrorDetails, val meta: Meta = Meta()) : ApiResponse<Nothing>()
 
     data class Meta(val timeStamp: Instant = Instant.now())
 
     data class ErrorDetails(val code: String, val details: Map<String, String>? = null)
 
     companion object {
-        fun <T> success(data: T): ApiResponse<T> = ApiResponse(
-            data = data,
-            meta = Meta(),
-        )
+        fun <T> success(data: T): ApiResponse<T> = Success(data)
 
-        fun error(code: String, details: Map<String, String>?): ApiResponse<Nothing?> = ApiResponse(
-            data = null,
-            meta = Meta(),
-            error = ErrorDetails(code, details),
-        )
+        fun error(code: String, details: Map<String, String>?): ApiResponse<Nothing> =
+            Error(ErrorDetails(code, details))
     }
 }

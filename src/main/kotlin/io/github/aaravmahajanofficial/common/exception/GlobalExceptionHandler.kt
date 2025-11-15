@@ -105,6 +105,6 @@ class GlobalExceptionHandler {
         logger.error("Missing default role: {}", ex.message)
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ApiResponse.error("INTERNAL_SERVER_ERROR", mapOf("error" to "Missing default role: ${ex.message}")))
+            .body(ApiResponse.error("INTERNAL_SERVER_ERROR", mapOf("error" to "System configuration error")))
     }
 }

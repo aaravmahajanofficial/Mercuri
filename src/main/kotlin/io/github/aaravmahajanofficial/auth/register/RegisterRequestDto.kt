@@ -36,7 +36,7 @@ data class RegisterRequestDto(
     @Pattern(
         regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&+=])(?=\\S+$).{8,128}$",
         message = "Password must be 8-128 characters long and include at least one uppercase letter, " +
-            "one lowercase letter, one digit, and one special character.",
+            "one lowercase letter, one digit, and one special character",
     )
     val password: String,
 
