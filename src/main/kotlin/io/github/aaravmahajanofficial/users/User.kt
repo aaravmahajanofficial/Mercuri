@@ -21,9 +21,15 @@ import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
+import jakarta.persistence.FetchType
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.JoinTable
+import jakarta.persistence.ManyToMany
 import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
 import org.hibernate.annotations.CreationTimestamp
+import org.hibernate.annotations.OnDelete
+import org.hibernate.annotations.OnDeleteAction
 import org.hibernate.annotations.UpdateTimestamp
 import java.time.Instant
 
@@ -40,14 +46,14 @@ class User(
     @Column(name = "password_hash", nullable = false, length = 255)
     var passwordHash: String,
 
-    @Column(name = "first_name", length = 100)
-    var firstName: String? = null,
+    @Column(name = "first_name", nullable = false, length = 100)
+    var firstName: String,
 
-    @Column(name = "last_name", length = 100)
-    var lastName: String? = null,
+    @Column(name = "last_name", nullable = false, length = 100)
+    var lastName: String,
 
-    @Column(name = "phone_number", length = 20)
-    var phoneNumber: String? = null,
+    @Column(name = "phone_number", nullable = false, length = 20)
+    var phoneNumber: String,
 
     @Column(name = "email_verified", nullable = false)
     var emailVerified: Boolean = false,
@@ -72,9 +78,15 @@ class User(
 
 ) : BaseEntity() {
 
-    @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true)
-    protected var _roles: MutableSet<UserRole> = mutableSetOf()
-    val roles: Set<UserRole> get() = _roles
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "user_role",
+        joinColumns = [JoinColumn(name = "user_id")],
+        inverseJoinColumns = [JoinColumn(name = "role_id")],
+    )
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    protected var _roles: MutableSet<Role> = mutableSetOf()
+    val roles: Set<Role> get() = _roles
 
     @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true)
     protected var _addresses: MutableSet<UserAddress> = mutableSetOf()
@@ -82,14 +94,12 @@ class User(
 
     fun fullName(): String = listOf(firstName, lastName).joinToString(" ").ifBlank { username }
 
-    fun addRole(role: UserRole) {
+    fun addRole(role: Role) {
         _roles.add(role)
-        role.user = this
     }
 
-    fun removeRole(role: UserRole) {
+    fun removeRole(role: Role) {
         _roles.remove(role)
-        role.user = null
     }
 
     fun addAddress(address: UserAddress) {
