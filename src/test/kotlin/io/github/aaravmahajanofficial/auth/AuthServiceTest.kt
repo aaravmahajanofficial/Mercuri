@@ -16,13 +16,17 @@
 package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
+import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
+import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
 import io.github.aaravmahajanofficial.users.Role
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
 import io.github.aaravmahajanofficial.users.User
 import io.github.aaravmahajanofficial.users.UserRepository
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.ArgumentCaptor
 import org.mockito.Captor
@@ -30,6 +34,7 @@ import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.context.ApplicationEventPublisher
@@ -61,6 +66,7 @@ class AuthServiceTest {
 
     private lateinit var requestDto: RegisterRequestDto
     private lateinit var customerRole: Role
+    private lateinit var customer: User
 
     @BeforeEach
     fun setUp() {
@@ -73,12 +79,21 @@ class AuthServiceTest {
             phoneNumber = "+1234567890",
         )
 
+        customer = User(
+            email = "john.doe@example.com",
+            username = "john_doe",
+            passwordHash = "hashed_password",
+            firstName = "John",
+            lastName = "Doe",
+            phoneNumber = "+1234567890",
+        )
+
         customerRole = Role(
             name = RoleType.CUSTOMER,
         )
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     fun `should register user successfully`() {
         // Given
         whenever(userRepository.findByEmail(requestDto.email)).thenReturn(null)
@@ -122,5 +137,52 @@ class AuthServiceTest {
         assertEquals(setOf(customerRole), savedUser.roles)
 
         verify(eventPublisher).publishEvent(any())
+    }
+
+    @Test
+    fun `should throw UserAlreadyExistsException when email is taken`() {
+        // Given
+        whenever(userRepository.findByEmail(requestDto.email)).thenReturn(customer)
+
+        // When & Then
+        val exception = assertThrows<UserAlreadyExistsException> {
+            authService.register(requestDto)
+        }
+
+        assertNotNull(exception.message)
+        verify(userRepository, never()).save(any())
+        verify(eventPublisher, never()).publishEvent(any())
+    }
+
+    @Test
+    fun `should throw UserAlreadyExistsException when username is taken`() {
+        // Given
+        whenever(userRepository.findByUsername(requestDto.username)).thenReturn(customer)
+
+        // When & Then
+        val exception = assertThrows<UserAlreadyExistsException> {
+            authService.register(requestDto)
+        }
+
+        assertNotNull(exception.message)
+        verify(userRepository, never()).save(any())
+        verify(eventPublisher, never()).publishEvent(any())
+    }
+
+    @Test
+    fun `should throw DefaultRoleNotFoundException when 'Customer' role is missing`() {
+        // Given
+        whenever(userRepository.findByEmail(requestDto.email)).thenReturn(null)
+        whenever(userRepository.findByUsername(requestDto.username)).thenReturn(null)
+        whenever(roleRepository.findByName(RoleType.CUSTOMER)).thenReturn(null)
+
+        // When & Then
+        val exception = assertThrows<DefaultRoleNotFoundException> {
+            authService.register(requestDto)
+        }
+
+        assertNotNull(exception.message)
+        verify(userRepository, never()).save(any())
+        verify(eventPublisher, never()).publishEvent(any())
     }
 }
