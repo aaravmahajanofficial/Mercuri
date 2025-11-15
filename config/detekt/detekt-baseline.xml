@@ -6,7 +6,7 @@
     <ID>ProtectedMemberInFinalClass:AuthRegistrationIntegrationTests.kt:AuthRegistrationIntegrationTests$@LocalServerPort protected var port: Int = 0</ID>
     <ID>ProtectedMemberInFinalClass:User.kt:User$@ManyToMany(fetch = FetchType.EAGER) @JoinTable( name = "user_role", joinColumns = [JoinColumn(name = "user_id")], inverseJoinColumns = [JoinColumn(name = "role_id")], ) @OnDelete(action = OnDeleteAction.CASCADE) protected var _roles: MutableSet&lt;Role&gt; = mutableSetOf()</ID>
     <ID>ProtectedMemberInFinalClass:User.kt:User$@OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true) protected var _addresses: MutableSet&lt;UserAddress&gt; = mutableSetOf()</ID>
-    <ID>UnusedParameter:AuthService.kt:AuthService$requestBody: RegisterRequestDto</ID>
+    <ID>ThrowsCount:AuthService.kt:AuthService$fun register(requestBody: RegisterRequestDto): RegisterResponseDto</ID>
     <ID>VariableNaming:User.kt:User$@ManyToMany(fetch = FetchType.EAGER) @JoinTable( name = "user_role", joinColumns = [JoinColumn(name = "user_id")], inverseJoinColumns = [JoinColumn(name = "role_id")], ) @OnDelete(action = OnDeleteAction.CASCADE) protected var _roles: MutableSet&lt;Role&gt; = mutableSetOf()</ID>
     <ID>VariableNaming:User.kt:User$@OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true) protected var _addresses: MutableSet&lt;UserAddress&gt; = mutableSetOf()</ID>
   </CurrentIssues>

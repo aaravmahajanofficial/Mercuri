@@ -46,14 +46,14 @@ class User(
     @Column(name = "password_hash", nullable = false, length = 255)
     var passwordHash: String,
 
-    @Column(name = "first_name", length = 100)
-    var firstName: String? = null,
+    @Column(name = "first_name", nullable = false, length = 100)
+    var firstName: String,
 
-    @Column(name = "last_name", length = 100)
-    var lastName: String? = null,
+    @Column(name = "last_name", nullable = false, length = 100)
+    var lastName: String,
 
-    @Column(name = "phone_number", length = 20)
-    var phoneNumber: String? = null,
+    @Column(name = "phone_number", nullable = false, length = 20)
+    var phoneNumber: String,
 
     @Column(name = "email_verified", nullable = false)
     var emailVerified: Boolean = false,

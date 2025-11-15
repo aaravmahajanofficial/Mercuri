@@ -37,8 +37,7 @@ class GlobalExceptionHandler {
         val errors = ex.bindingResult.allErrors.filterIsInstance<FieldError>()
             .associate { it.field to (it.defaultMessage ?: "Invalid Value") }
 
-        logger.warn("Validation: {}", errors)
-
+        logger.warn("Validation errors: {}", errors)
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
             .body(ApiResponse.error("VALIDATION_FAILED", errors))
     }
@@ -99,5 +98,13 @@ class GlobalExceptionHandler {
                     mapOf("error" to "An unexpected error occurred"),
                 ),
             )
+    }
+
+    @ExceptionHandler(DefaultRoleNotFoundException::class)
+    fun handleMissingRole(ex: DefaultRoleNotFoundException): ResponseEntity<ApiResponse<Nothing?>> {
+        logger.error("Missing default role: {}", ex.message)
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(ApiResponse.error("INTERNAL_SERVER_ERROR", mapOf("error" to "Missing default role: ${ex.message}")))
     }
 }
