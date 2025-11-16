@@ -15,6 +15,9 @@
  */
 package io.github.aaravmahajanofficial.auth
 
+import io.github.aaravmahajanofficial.users.Role
+import io.github.aaravmahajanofficial.users.RoleRepository
+import io.github.aaravmahajanofficial.users.RoleType
 import io.github.aaravmahajanofficial.users.User
 import io.github.aaravmahajanofficial.users.UserRepository
 import org.junit.jupiter.api.BeforeEach
@@ -25,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection
+import org.springframework.data.repository.findByIdOrNull
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
@@ -35,6 +39,7 @@ import kotlin.test.assertEquals
 class AuthRepositoryTest @Autowired constructor(
     private val testEntityManager: TestEntityManager,
     private val userRepository: UserRepository,
+    private val roleRepository: RoleRepository,
 ) {
     companion object {
         @Container
@@ -102,5 +107,28 @@ class AuthRepositoryTest @Autowired constructor(
 
         // Then
         assertNull(foundUser)
+    }
+
+    @Test
+    fun `should save and retrieve user with roles`() { // test many-to-many mapping between user and role
+
+        // Given
+        val customerRole = Role(name = RoleType.CUSTOMER)
+        roleRepository.save(customerRole)
+
+        testUser.addRole(customerRole)
+
+        // mark entity for insertion & force Hibernate to execute SQL immediately
+        testEntityManager.persistAndFlush(testUser)
+
+        // clear the first-level cache, to read fresh from the DB, otherwise it would return the same in-memory object
+        testEntityManager.clear()
+
+        // When
+        val foundUser = userRepository.findByIdOrNull(testUser.id!!)
+
+        // Then
+        assertEquals(1, foundUser?.roles?.size) // assure only 1 role is persisted
+        assertEquals(RoleType.CUSTOMER, foundUser?.roles?.first()?.name) // exactly the one that was persisted
     }
 }
