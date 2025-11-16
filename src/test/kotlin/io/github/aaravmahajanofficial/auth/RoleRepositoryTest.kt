@@ -20,6 +20,7 @@ import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
+import org.junit.jupiter.api.assertNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager
@@ -28,6 +29,7 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @Testcontainers
 @DataJpaTest
@@ -55,5 +57,42 @@ class RoleRepositoryTest @Autowired constructor(
         // Then
         assertNotNull(foundRole)
         assertEquals(RoleType.CUSTOMER, foundRole.name)
+    }
+
+    @Test
+    fun `should return null for non-existent role name`() {
+        // Given
+        val customerRole = Role(name = RoleType.CUSTOMER)
+        testEntityManager.persistAndFlush(customerRole)
+
+        // When
+        val foundRole = roleRepository.findByName(RoleType.ADMIN)
+
+        // Then
+        assertNull(foundRole)
+    }
+
+    @Test
+    fun `should save and retrieve multiple roles`() {
+        // Given
+        val customer = Role(name = RoleType.CUSTOMER)
+        val seller = Role(name = RoleType.SELLER)
+        val admin = Role(name = RoleType.ADMIN)
+        val superAdmin = Role(name = RoleType.SUPER_ADMIN)
+
+        testEntityManager.persistAndFlush(customer)
+        testEntityManager.persistAndFlush(seller)
+        testEntityManager.persistAndFlush(admin)
+        testEntityManager.persistAndFlush(superAdmin)
+
+        // When
+        val allRoles = roleRepository.findAll()
+
+        // Then
+        assertEquals(4, allRoles.size)
+        assertTrue(allRoles.any { it.name == RoleType.CUSTOMER })
+        assertTrue(allRoles.any { it.name == RoleType.SELLER })
+        assertTrue(allRoles.any { it.name == RoleType.ADMIN })
+        assertTrue(allRoles.any { it.name == RoleType.SUPER_ADMIN })
     }
 }

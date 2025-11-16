@@ -201,6 +201,28 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
     }
 
     @Test
+    fun `should return 409 Conflict when username already exists`() {
+        // Given
+        val request = createValidRegisterRequest()
+
+        whenever(authService.register(any())).thenThrow(ResourceConflictException("Username already in use"))
+
+        // When & Then
+        mockMvc.post("/api/v1/auth/register") {
+            contentType = APPLICATION_JSON
+            content = objectMapper.writeValueAsString(request)
+            accept = APPLICATION_JSON
+        }.andExpect {
+            status { isConflict() }
+            jsonPath("$.meta.timeStamp") { exists() }
+            jsonPath("$.error.code") { value("RESOURCE_CONFLICT") }
+            jsonPath("$.error.details.error") { exists() }
+        }
+
+        verify(authService, times(1)).register(any())
+    }
+
+    @Test
     fun `should return 400 Bad Request for malformed JSON`() {
         // Given
         val request = """
