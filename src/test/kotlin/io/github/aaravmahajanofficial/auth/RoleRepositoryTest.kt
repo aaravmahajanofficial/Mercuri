@@ -62,9 +62,6 @@ class RoleRepositoryTest @Autowired constructor(
     @Test
     fun `should return null for non-existent role name`() {
         // Given
-        val customerRole = Role(name = RoleType.CUSTOMER)
-        testEntityManager.persistAndFlush(customerRole)
-
         // When
         val foundRole = roleRepository.findByName(RoleType.ADMIN)
 
