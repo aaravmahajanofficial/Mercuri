@@ -44,7 +44,7 @@ class AuthIntegrationTests @Autowired constructor(
 
     @BeforeEach
     fun setup() {
-        roleRepository.save(Role(name = RoleType.CUSTOMER))
+        roleRepository.findByName(RoleType.CUSTOMER) ?: roleRepository.save(Role(name = RoleType.CUSTOMER))
     }
 
     @Test
