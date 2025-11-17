@@ -13,7 +13,7 @@ spring-boot = "3.5.7"
 spring-dependency-management = "1.1.7"
 
 # Observability
-kotlin-logging = "5.1.0"
+kotlin-logging = "5.1.4"
 
 # Testing
 mockk = "1.14.6"
