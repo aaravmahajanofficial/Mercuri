@@ -17,7 +17,7 @@ kotlin-logging = "7.0.13"
 
 # Testing
 mockk = "1.14.6"
-kotest = "6.0.4"
+kotest = "6.0.5"
 mockito-kotlin = "6.1.0"
 
 [libraries]
