@@ -19,6 +19,7 @@ import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.users.Role
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -45,6 +46,11 @@ class AuthIntegrationTests @Autowired constructor(
     @BeforeEach
     fun setup() {
         roleRepository.findByName(RoleType.CUSTOMER) ?: roleRepository.save(Role(name = RoleType.CUSTOMER))
+    }
+
+    @AfterEach
+    fun tearDown() {
+        roleRepository.deleteAll()
     }
 
     @Test
