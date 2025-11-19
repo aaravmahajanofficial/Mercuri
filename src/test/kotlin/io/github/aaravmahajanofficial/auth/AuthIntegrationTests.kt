@@ -20,6 +20,9 @@ import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.users.Role
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
+import io.github.aaravmahajanofficial.users.User
+import io.github.aaravmahajanofficial.users.UserRepository
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -31,6 +34,7 @@ import org.springframework.test.web.reactive.server.WebTestClient
 class AuthIntegrationTests @Autowired constructor(
     val webTestClient: WebTestClient,
     val roleRepository: RoleRepository,
+    val userRepository: UserRepository,
 ) : BaseIntegrationTest() {
 
     @BeforeEach
@@ -38,6 +42,12 @@ class AuthIntegrationTests @Autowired constructor(
         if (roleRepository.findByName(RoleType.CUSTOMER) == null) {
             roleRepository.save(Role(name = RoleType.CUSTOMER))
         }
+    }
+
+    @AfterEach
+    fun tearDown() {
+        userRepository.deleteAll()
+        roleRepository.deleteAll()
     }
 
     @Test
@@ -71,5 +81,68 @@ class AuthIntegrationTests @Autowired constructor(
             .jsonPath("$.data.roles").isEqualTo(listOf(RoleType.CUSTOMER.name))
             .jsonPath("$.meta.timeStamp").isNotEmpty
             .jsonPath("$.data.createdAt").isNotEmpty
+    }
+
+    @Test
+    fun `should return 409 Conflict when email already exists`() { // test database has a UNIQUE constraint
+        // Given
+        val existingUser = User(
+            email = "john.doe@example.com",
+            username = "already_existing_user",
+            passwordHash = "hashed_password",
+            firstName = "John",
+            lastName = "Doe",
+            phoneNumber = "+1987654321",
+        )
+
+        userRepository.save(existingUser)
+
+        // Try to register with same email
+
+        val request = RegisterRequestDto(
+            email = "john.doe@example.com",
+            username = "john_doe_123",
+            password = "SecureP@ss123",
+            firstName = "John",
+            lastName = "Doe",
+            phoneNumber = "+1234567890",
+        )
+
+        // When
+        val result = webTestClient.post().uri("/api/v1/auth/register")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(request)
+            .exchange()
+
+        // Then
+        result.expectStatus().is4xxClientError // 409 Conflict
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBody()
+            .jsonPath("$.error.code").isEqualTo("RESOURCE_CONFLICT")
+    }
+
+    @Test
+    fun `should return 400 Bad Request on validation failure`() {
+        val invalidRequest = RegisterRequestDto(
+            email = "not-an-email",
+            username = "",
+            password = "123",
+            firstName = "",
+            lastName = "",
+            phoneNumber = "",
+        )
+
+        // When
+        val result = webTestClient.post().uri("/api/v1/auth/register")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(invalidRequest)
+            .exchange()
+
+        // Then
+        result.expectStatus().isBadRequest
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBody()
+            .jsonPath("$.error.code").isEqualTo("VALIDATION_FAILED")
+            .jsonPath("$.error.details.email").exists()
     }
 }
