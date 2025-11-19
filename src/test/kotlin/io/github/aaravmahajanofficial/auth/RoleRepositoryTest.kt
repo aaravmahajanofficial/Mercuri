@@ -15,6 +15,7 @@
  */
 package io.github.aaravmahajanofficial.auth
 
+import io.github.aaravmahajanofficial.BaseIntegrationTest
 import io.github.aaravmahajanofficial.users.Role
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
@@ -24,25 +25,14 @@ import org.junit.jupiter.api.assertNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection
-import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-@Testcontainers
 @DataJpaTest
 class RoleRepositoryTest @Autowired constructor(
     private val testEntityManager: TestEntityManager,
     private val roleRepository: RoleRepository,
-) {
-
-    companion object {
-        @Container
-        @ServiceConnection
-        val postgres = PostgreSQLContainer<Nothing>("postgres:18-alpine")
-    }
+) : BaseIntegrationTest() {
 
     @Test
     fun `should find role by name`() {
@@ -72,24 +62,32 @@ class RoleRepositoryTest @Autowired constructor(
     @Test
     fun `should save and retrieve multiple roles`() {
         // Given
-        val customer = Role(name = RoleType.CUSTOMER)
-        val seller = Role(name = RoleType.SELLER)
-        val admin = Role(name = RoleType.ADMIN)
-        val superAdmin = Role(name = RoleType.SUPER_ADMIN)
+        val roles = listOf(
+            Role(name = RoleType.CUSTOMER),
+            Role(name = RoleType.SELLER),
+            Role(name = RoleType.ADMIN),
+            Role(name = RoleType.SUPER_ADMIN),
+        )
 
-        testEntityManager.persistAndFlush(customer)
-        testEntityManager.persistAndFlush(seller)
-        testEntityManager.persistAndFlush(admin)
-        testEntityManager.persistAndFlush(superAdmin)
+        roles.forEach { testEntityManager.persistAndFlush(it) }
 
         // When
         val allRoles = roleRepository.findAll()
 
         // Then
         assertEquals(4, allRoles.size)
-        assertTrue(allRoles.any { it.name == RoleType.CUSTOMER })
-        assertTrue(allRoles.any { it.name == RoleType.SELLER })
-        assertTrue(allRoles.any { it.name == RoleType.ADMIN })
-        assertTrue(allRoles.any { it.name == RoleType.SUPER_ADMIN })
+
+        val allTypes = allRoles.map { it.name }
+
+        assertTrue(
+            allTypes.containsAll(
+                listOf(
+                    RoleType.CUSTOMER,
+                    RoleType.SELLER,
+                    RoleType.ADMIN,
+                    RoleType.SUPER_ADMIN,
+                ),
+            ),
+        )
     }
 }
