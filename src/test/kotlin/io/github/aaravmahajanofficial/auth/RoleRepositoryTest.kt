@@ -20,6 +20,7 @@ import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
+import org.junit.jupiter.api.assertNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager
@@ -28,6 +29,7 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @Testcontainers
 @DataJpaTest
@@ -35,7 +37,6 @@ class RoleRepositoryTest @Autowired constructor(
     private val testEntityManager: TestEntityManager,
     private val roleRepository: RoleRepository,
 ) {
-
     companion object {
         @Container
         @ServiceConnection
@@ -55,5 +56,47 @@ class RoleRepositoryTest @Autowired constructor(
         // Then
         assertNotNull(foundRole)
         assertEquals(RoleType.CUSTOMER, foundRole.name)
+    }
+
+    @Test
+    fun `should return null for non-existent role name`() {
+        // Given
+        // When
+        val foundRole = roleRepository.findByName(RoleType.ADMIN)
+
+        // Then
+        assertNull(foundRole)
+    }
+
+    @Test
+    fun `should save and retrieve multiple roles`() {
+        // Given
+        val roles = listOf(
+            Role(name = RoleType.CUSTOMER),
+            Role(name = RoleType.SELLER),
+            Role(name = RoleType.ADMIN),
+            Role(name = RoleType.SUPER_ADMIN),
+        )
+
+        roles.forEach { testEntityManager.persistAndFlush(it) }
+
+        // When
+        val allRoles = roleRepository.findAll()
+
+        // Then
+        assertEquals(4, allRoles.size)
+
+        val allTypes = allRoles.map { it.name }
+
+        assertTrue(
+            allTypes.containsAll(
+                listOf(
+                    RoleType.CUSTOMER,
+                    RoleType.SELLER,
+                    RoleType.ADMIN,
+                    RoleType.SUPER_ADMIN,
+                ),
+            ),
+        )
     }
 }
