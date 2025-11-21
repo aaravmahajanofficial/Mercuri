@@ -121,12 +121,12 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
         mockMvc.post("/api/v1/auth/register") {
             contentType = APPLICATION_JSON
             content = request
-            accept = APPLICATION_JSON
+            accept = APPLICATION_PROBLEM_JSON
         }.andExpect {
             status { isBadRequest() }
             content { contentType(APPLICATION_PROBLEM_JSON) }
 
-            jsonPath("$.type") { value("about:blank") }
+            jsonPath("$.type") { value("https://api.example.com/problems/malformed-json") }
             jsonPath("$.status") { value(400) }
             jsonPath("$.title") { value("Malformed JSON") }
             jsonPath("$.detail") { value("Invalid or malformed JSON payload.") }
@@ -149,7 +149,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
             status { isMethodNotAllowed() }
             content { contentType(APPLICATION_PROBLEM_JSON) }
 
-            jsonPath("$.type") { value("about:blank") }
+            jsonPath("$.type") { value("https://api.example.com/problems/method-not-allowed") }
             jsonPath("$.status") { value(405) }
             jsonPath("$.title") { value("Method Not Allowed") }
             jsonPath("$.detail") { exists() }
@@ -176,7 +176,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
             status { isUnsupportedMediaType() }
             content { contentType(APPLICATION_PROBLEM_JSON) }
 
-            jsonPath("$.type") { value("about:blank") }
+            jsonPath("$.type") { value("https://api.example.com/problems/unsupported-media-type") }
             jsonPath("$.status") { value(415) }
             jsonPath("$.title") { value("Unsupported Media Type") }
             jsonPath("$.detail") { exists() }
@@ -209,7 +209,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
             status { isUnprocessableContent() }
             content { contentType(APPLICATION_PROBLEM_JSON) }
 
-            jsonPath("$.type") { value("about:blank") }
+            jsonPath("$.type") { value("https://api.example.com/problems/validation") }
             jsonPath("$.status") { value(422) }
             jsonPath("$.title") { value("Validation Failed") }
             jsonPath("$.detail") { value("One or more fields failed validation.") }
@@ -244,7 +244,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
             status { isConflict() }
             content { contentType(APPLICATION_PROBLEM_JSON) }
 
-            jsonPath("$.type") { value("about:blank") }
+            jsonPath("$.type") { value("https://api.example.com/problems/conflict") }
             jsonPath("$.status") { value(409) }
             jsonPath("$.title") { value("Resource Conflict") }
             jsonPath("$.detail") { value("Email already in use") }
@@ -270,7 +270,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
             status { isConflict() }
             content { contentType(APPLICATION_PROBLEM_JSON) }
 
-            jsonPath("$.type") { value("about:blank") }
+            jsonPath("$.type") { value("https://api.example.com/problems/conflict") }
             jsonPath("$.status") { value(409) }
             jsonPath("$.title") { value("Resource Conflict") }
             jsonPath("$.detail") { value("Username already in use") }
@@ -296,7 +296,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
             status { is5xxServerError() }
             content { contentType(APPLICATION_PROBLEM_JSON) }
 
-            jsonPath("$.type") { value("about:blank") }
+            jsonPath("$.type") { value("https://api.example.com/problems/internal-server-error") }
             jsonPath("$.status") { value(500) }
             jsonPath("$.title") { value("Internal Server Error") }
             jsonPath("$.detail") { value("An unexpected error occurred.") }

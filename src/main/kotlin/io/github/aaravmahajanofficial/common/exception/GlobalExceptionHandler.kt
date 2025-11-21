@@ -49,7 +49,6 @@ class GlobalExceptionHandler {
             mapOf(
                 "field" to error.field,
                 "message" to (error.defaultMessage ?: "Invalid Value"),
-                "rejectedValue" to error.rejectedValue,
                 "code" to (error.code ?: "Invalid"),
             )
         }

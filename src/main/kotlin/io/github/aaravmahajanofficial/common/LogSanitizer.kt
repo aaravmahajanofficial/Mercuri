@@ -16,6 +16,9 @@
 package io.github.aaravmahajanofficial.common
 
 object LogSanitizer {
+
+    const val LENGTH_OF_OUTPUT = 500
+
     fun sanitizeLogInput(input: Any?): String =
-        input?.toString()?.replace("\n", "_")?.replace("\r", "_")?.replace("\t", "_") ?: ""
+        input?.toString()?.take(LENGTH_OF_OUTPUT)?.replace("\n", "_")?.replace("\r", "_")?.replace("\t", "_") ?: ""
 }
