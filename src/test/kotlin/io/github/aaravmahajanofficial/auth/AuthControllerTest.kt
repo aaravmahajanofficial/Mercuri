@@ -15,9 +15,8 @@
  */
 package io.github.aaravmahajanofficial.auth
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
-import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
+import io.github.aaravmahajanofficial.auth.register.RequestDto
+import io.github.aaravmahajanofficial.auth.register.ResponseDto
 import io.github.aaravmahajanofficial.common.exception.ResourceConflictException
 import io.github.aaravmahajanofficial.users.RoleType
 import org.hamcrest.CoreMatchers.hasItem
@@ -29,14 +28,15 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.http.MediaType.APPLICATION_XML
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
+import tools.jackson.databind.ObjectMapper
 import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -55,7 +55,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
             firstName: String = "John",
             lastName: String = "Doe",
             phoneNumber: String = "+1234567890",
-        ) = RegisterRequestDto(email, username, password, firstName, lastName, phoneNumber)
+        ) = RequestDto(email, username, password, firstName, lastName, phoneNumber)
     }
 
     @Test
@@ -63,7 +63,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
         // Given
         val request = createValidRegisterRequest()
 
-        val serviceResponse = RegisterResponseDto(
+        val serviceResponse = ResponseDto(
             id = UUID.randomUUID(),
             email = request.email,
             username = request.username,
@@ -111,7 +111,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
     @Test
     fun `should return 400 Bad Request for all validation failures`() {
         // Given
-        val request = RegisterRequestDto(
+        val request = RequestDto(
             email = "invalid_email",
             username = "",
             password = "invalid",

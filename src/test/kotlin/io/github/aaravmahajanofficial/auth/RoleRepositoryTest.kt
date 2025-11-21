@@ -15,6 +15,7 @@
  */
 package io.github.aaravmahajanofficial.auth
 
+import io.github.aaravmahajanofficial.TestcontainersConfiguration
 import io.github.aaravmahajanofficial.users.Role
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
@@ -22,27 +23,18 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.assertNull
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection
-import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager
+import org.springframework.context.annotation.Import
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-@Testcontainers
+@Import(TestcontainersConfiguration::class)
 @DataJpaTest
 class RoleRepositoryTest @Autowired constructor(
     private val testEntityManager: TestEntityManager,
     private val roleRepository: RoleRepository,
 ) {
-    companion object {
-        @Container
-        @ServiceConnection
-        val postgres = PostgreSQLContainer<Nothing>("postgres:18-alpine")
-    }
-
     @Test
     fun `should find role by name`() {
         // Given

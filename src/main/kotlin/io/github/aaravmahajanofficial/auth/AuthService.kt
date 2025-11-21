@@ -16,8 +16,8 @@
 package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.auth.events.UserRegisteredEvent
-import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
-import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
+import io.github.aaravmahajanofficial.auth.register.RequestDto
+import io.github.aaravmahajanofficial.auth.register.ResponseDto
 import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
 import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
 import io.github.aaravmahajanofficial.users.RoleRepository
@@ -37,7 +37,7 @@ class AuthService(
     private val applicationEventPublisher: ApplicationEventPublisher,
 ) {
 
-    fun register(requestBody: RegisterRequestDto): RegisterResponseDto {
+    fun register(requestBody: RequestDto): ResponseDto {
         if (userRepository.findByEmail(requestBody.email) != null) {
             throw UserAlreadyExistsException("User with provided credentials already exists")
         }
@@ -55,7 +55,7 @@ class AuthService(
         val user = User(
             email = requestBody.email,
             username = requestBody.username,
-            passwordHash = hashedPassword,
+            passwordHash = hashedPassword!!,
             firstName = requestBody.firstName,
             lastName = requestBody.lastName,
             phoneNumber = requestBody.phoneNumber,
@@ -68,7 +68,7 @@ class AuthService(
 
         applicationEventPublisher.publishEvent(UserRegisteredEvent(savedUser))
 
-        return RegisterResponseDto(
+        return ResponseDto(
             id = savedUser.id!!,
             email = savedUser.email,
             username = savedUser.username,

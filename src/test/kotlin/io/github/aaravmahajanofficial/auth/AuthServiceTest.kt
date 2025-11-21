@@ -15,7 +15,7 @@
  */
 package io.github.aaravmahajanofficial.auth
 
-import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
+import io.github.aaravmahajanofficial.auth.register.RequestDto
 import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
 import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
 import io.github.aaravmahajanofficial.users.Role
@@ -64,13 +64,13 @@ class AuthServiceTest {
     @InjectMocks
     lateinit var authService: AuthService
 
-    private lateinit var requestDto: RegisterRequestDto
+    private lateinit var requestDto: RequestDto
     private lateinit var customerRole: Role
     private lateinit var customer: User
 
     @BeforeEach
     fun setUp() {
-        requestDto = RegisterRequestDto(
+        requestDto = RequestDto(
             email = "john.doe@example.com",
             username = "john_doe_123",
             password = "SecureP@ss123",
