@@ -20,16 +20,10 @@ import java.time.Instant
 sealed class ApiResponse<out T> {
 
     data class Success<T>(val data: T, val meta: Meta = Meta()) : ApiResponse<T>()
-    data class Error(val error: ErrorDetails, val meta: Meta = Meta()) : ApiResponse<Nothing>()
 
-    data class Meta(val timeStamp: Instant = Instant.now())
-
-    data class ErrorDetails(val code: String, val details: Map<String, String>? = null)
+    data class Meta(val timestamp: Instant = Instant.now())
 
     companion object {
         fun <T> success(data: T): ApiResponse<T> = Success(data)
-
-        fun error(code: String, details: Map<String, String>?): ApiResponse<Nothing> =
-            Error(ErrorDetails(code, details))
     }
 }

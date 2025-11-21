@@ -30,6 +30,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.test.web.reactive.server.WebTestClient
 
 @Import(TestcontainersConfiguration::class)
@@ -82,7 +83,7 @@ class AuthIntegrationTests @Autowired constructor(
             .jsonPath("$.data.status").isEqualTo(AuthStatus.PENDING_VERIFICATION)
             .jsonPath("$.data.emailVerified").isEqualTo(false)
             .jsonPath("$.data.roles").isEqualTo(listOf(RoleType.CUSTOMER.name))
-            .jsonPath("$.meta.timeStamp").isNotEmpty
+            .jsonPath("$.meta.timestamp").isNotEmpty
             .jsonPath("$.data.createdAt").isNotEmpty
     }
 
@@ -119,13 +120,16 @@ class AuthIntegrationTests @Autowired constructor(
 
         // Then
         result.expectStatus().is4xxClientError // 409 Conflict
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectHeader().contentType(APPLICATION_PROBLEM_JSON)
             .expectBody()
-            .jsonPath("$.error.code").isEqualTo("RESOURCE_CONFLICT")
+            .jsonPath("$.status").isEqualTo(409)
+            .jsonPath("$.title").isEqualTo("Resource Conflict")
+            .jsonPath("$.detail").exists()
+            .jsonPath("$.instance").exists()
     }
 
     @Test
-    fun `should return 400 Bad Request on validation failure`() {
+    fun `should return 422 Unprocessable Content on validation failure`() {
         val invalidRequest = RequestDto(
             email = "not-an-email",
             username = "",
@@ -142,10 +146,14 @@ class AuthIntegrationTests @Autowired constructor(
             .exchange()
 
         // Then
-        result.expectStatus().isBadRequest
-            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+        result.expectStatus().is4xxClientError
+            .expectHeader().contentType(APPLICATION_PROBLEM_JSON)
             .expectBody()
-            .jsonPath("$.error.code").isEqualTo("VALIDATION_FAILED")
-            .jsonPath("$.error.details.email").exists()
+            .jsonPath("$.status").isEqualTo(422)
+            .jsonPath("$.title").isEqualTo("Validation Failed")
+            .jsonPath("$.detail").exists()
+            .jsonPath("$.instance").exists()
+            .jsonPath("$.validationErrors").isArray
+            .jsonPath("$.validationErrors[?(@.field=='email')]").exists()
     }
 }

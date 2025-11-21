@@ -31,6 +31,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.http.MediaType.APPLICATION_JSON
+import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.http.MediaType.APPLICATION_XML
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
@@ -84,14 +85,17 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
         }.andExpect {
             status { isCreated() }
             content { contentTypeCompatibleWith(APPLICATION_JSON) }
+
             jsonPath("$.data.id") { value(serviceResponse.id.toString()) }
             jsonPath("$.data.email") { value(serviceResponse.email) }
             jsonPath("$.data.username") { value(serviceResponse.username) }
             jsonPath("$.data.phoneNumber") { value(serviceResponse.phoneNumber) }
             jsonPath("$.data.status") { value(serviceResponse.status.value) }
             jsonPath("$.data.emailVerified") { value(serviceResponse.emailVerified) }
+
             jsonPath("$.data.roles") { value(hasItem(RoleType.CUSTOMER.name)) }
-            jsonPath("$.meta.timeStamp") { exists() }
+
+            jsonPath("$.meta.timestamp") { exists() }
             jsonPath("$.data.createdAt") { exists() }
         }
 
@@ -109,50 +113,50 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
     }
 
     @Test
-    fun `should return 400 Bad Request for all validation failures`() {
+    fun `should return 400 Bad Request for malformed JSON`() {
         // Given
-        val request = RequestDto(
-            email = "invalid_email",
-            username = "",
-            password = "invalid",
-            firstName = "",
-            lastName = "",
-            phoneNumber = "abc",
-        )
+        val request = "{ invalid"
 
         // When & Then
         mockMvc.post("/api/v1/auth/register") {
             contentType = APPLICATION_JSON
-            content = objectMapper.writeValueAsString(request)
+            content = request
             accept = APPLICATION_JSON
         }.andExpect {
             status { isBadRequest() }
-            jsonPath("$.error.code") { value("VALIDATION_FAILED") }
-            jsonPath("$.meta.timeStamp") { exists() }
-            jsonPath("$.error.details.email") { exists() }
-            jsonPath("$.error.details.username") { exists() }
-            jsonPath("$.error.details.password") { exists() }
-            jsonPath("$.error.details.firstName") { exists() }
-            jsonPath("$.error.details.lastName") { exists() }
-            jsonPath("$.error.details.phoneNumber") { exists() }
+            content { contentType(APPLICATION_PROBLEM_JSON) }
+
+            jsonPath("$.type") { value("about:blank") }
+            jsonPath("$.status") { value(400) }
+            jsonPath("$.title") { value("Malformed JSON") }
+            jsonPath("$.detail") { value("Invalid or malformed JSON payload.") }
+            jsonPath("$.instance") { value("http://localhost/api/v1/auth/register") }
+
+            jsonPath("$.cause") { exists() }
         }
 
         verify(authService, never()).register(any())
     }
 
     @Test
-    fun `should return 405 Method Not Allowed for GET request`() {
+    fun `should return 405 Method Not Allowed`() {
         // Given
 
         // When & Then
         mockMvc.get("/api/v1/auth/register") {
-            contentType = APPLICATION_JSON
-            accept = APPLICATION_JSON
+            accept = APPLICATION_PROBLEM_JSON
         }.andExpect {
             status { isMethodNotAllowed() }
-            jsonPath("$.meta.timeStamp") { exists() }
-            jsonPath("$.error.code") { value("METHOD_NOT_ALLOWED") }
-            jsonPath("$.error.details.error") { exists() }
+            content { contentType(APPLICATION_PROBLEM_JSON) }
+
+            jsonPath("$.type") { value("about:blank") }
+            jsonPath("$.status") { value(405) }
+            jsonPath("$.title") { value("Method Not Allowed") }
+            jsonPath("$.detail") { exists() }
+            jsonPath("$.instance") { value("http://localhost/api/v1/auth/register") }
+
+            jsonPath("$.rejectedMethod") { value("GET") }
+            jsonPath("$.allowedMethods[0]") { value("POST") }
         }
 
         verify(authService, never()).register(any())
@@ -167,12 +171,58 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
         mockMvc.post("/api/v1/auth/register") {
             contentType = APPLICATION_XML
             content = objectMapper.writeValueAsString(request)
-            accept = APPLICATION_JSON
+            accept = APPLICATION_PROBLEM_JSON
         }.andExpect {
             status { isUnsupportedMediaType() }
-            jsonPath("$.meta.timeStamp") { exists() }
-            jsonPath("$.error.code") { value("UNSUPPORTED_MEDIA_TYPE") }
-            jsonPath("$.error.details.error") { exists() }
+            content { contentType(APPLICATION_PROBLEM_JSON) }
+
+            jsonPath("$.type") { value("about:blank") }
+            jsonPath("$.status") { value(415) }
+            jsonPath("$.title") { value("Unsupported Media Type") }
+            jsonPath("$.detail") { exists() }
+            jsonPath("$.instance") { value("http://localhost/api/v1/auth/register") }
+
+            jsonPath("$.mediaType") { exists() }
+        }
+
+        verify(authService, never()).register(any())
+    }
+
+    @Test
+    fun `should return 422 Unprocessable Entity for all validation failures`() {
+        // Given
+        val request = RequestDto(
+            email = "invalid_email",
+            username = "",
+            password = "invalid",
+            firstName = "",
+            lastName = "",
+            phoneNumber = "abc",
+        )
+
+        // When & Then
+        mockMvc.post("/api/v1/auth/register") {
+            contentType = APPLICATION_JSON
+            content = objectMapper.writeValueAsString(request)
+            accept = APPLICATION_PROBLEM_JSON
+        }.andExpect {
+            status { isUnprocessableContent() }
+            content { contentType(APPLICATION_PROBLEM_JSON) }
+
+            jsonPath("$.type") { value("about:blank") }
+            jsonPath("$.status") { value(422) }
+            jsonPath("$.title") { value("Validation Failed") }
+            jsonPath("$.detail") { value("One or more fields failed validation.") }
+            jsonPath("$.instance") { value("http://localhost/api/v1/auth/register") }
+
+            jsonPath("$.validationErrors") { isArray() }
+
+            jsonPath("$.validationErrors[?(@.field=='email')]") { exists() }
+            jsonPath("$.validationErrors[?(@.field=='username')]") { exists() }
+            jsonPath("$.validationErrors[?(@.field=='password')]") { exists() }
+            jsonPath("$.validationErrors[?(@.field=='firstName')]") { exists() }
+            jsonPath("$.validationErrors[?(@.field=='lastName')]") { exists() }
+            jsonPath("$.validationErrors[?(@.field=='phoneNumber')]") { exists() }
         }
 
         verify(authService, never()).register(any())
@@ -189,12 +239,16 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
         mockMvc.post("/api/v1/auth/register") {
             contentType = APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
-            accept = APPLICATION_JSON
+            accept = APPLICATION_PROBLEM_JSON
         }.andExpect {
             status { isConflict() }
-            jsonPath("$.meta.timeStamp") { exists() }
-            jsonPath("$.error.code") { value("RESOURCE_CONFLICT") }
-            jsonPath("$.error.details.error") { exists() }
+            content { contentType(APPLICATION_PROBLEM_JSON) }
+
+            jsonPath("$.type") { value("about:blank") }
+            jsonPath("$.status") { value(409) }
+            jsonPath("$.title") { value("Resource Conflict") }
+            jsonPath("$.detail") { value("Email already in use") }
+            jsonPath("$.instance") { value("http://localhost/api/v1/auth/register") }
         }
 
         verify(authService, times(1)).register(any())
@@ -211,39 +265,19 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
         mockMvc.post("/api/v1/auth/register") {
             contentType = APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
-            accept = APPLICATION_JSON
+            accept = APPLICATION_PROBLEM_JSON
         }.andExpect {
             status { isConflict() }
-            jsonPath("$.meta.timeStamp") { exists() }
-            jsonPath("$.error.code") { value("RESOURCE_CONFLICT") }
-            jsonPath("$.error.details.error") { exists() }
+            content { contentType(APPLICATION_PROBLEM_JSON) }
+
+            jsonPath("$.type") { value("about:blank") }
+            jsonPath("$.status") { value(409) }
+            jsonPath("$.title") { value("Resource Conflict") }
+            jsonPath("$.detail") { value("Username already in use") }
+            jsonPath("$.instance") { value("http://localhost/api/v1/auth/register") }
         }
 
         verify(authService, times(1)).register(any())
-    }
-
-    @Test
-    fun `should return 400 Bad Request for malformed JSON`() {
-        // Given
-        val request = """
-            {
-              "email": "john.doe@example.com",
-            }
-        """.trimIndent() // A trailing comma is invalid JSON
-
-        // When & Then
-        mockMvc.post("/api/v1/auth/register") {
-            contentType = APPLICATION_JSON
-            content = request
-            accept = APPLICATION_JSON
-        }.andExpect {
-            status { isBadRequest() }
-            jsonPath("$.meta.timeStamp") { exists() }
-            jsonPath("$.error.code") { value("MALFORMED_JSON") }
-            jsonPath("$.error.details.error") { exists() }
-        }
-
-        verify(authService, never()).register(any())
     }
 
     @Test
@@ -257,12 +291,16 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
         mockMvc.post("/api/v1/auth/register") {
             contentType = APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
-            accept = APPLICATION_JSON
+            accept = APPLICATION_PROBLEM_JSON
         }.andExpect {
             status { is5xxServerError() }
-            jsonPath("$.meta.timeStamp") { exists() }
-            jsonPath("$.error.code") { value("INTERNAL_SERVER_ERROR") }
-            jsonPath("$.error.details.error") { exists() }
+            content { contentType(APPLICATION_PROBLEM_JSON) }
+
+            jsonPath("$.type") { value("about:blank") }
+            jsonPath("$.status") { value(500) }
+            jsonPath("$.title") { value("Internal Server Error") }
+            jsonPath("$.detail") { value("An unexpected error occurred.") }
+            jsonPath("$.instance") { value("http://localhost/api/v1/auth/register") }
         }
 
         verify(authService, times(1)).register(any())
