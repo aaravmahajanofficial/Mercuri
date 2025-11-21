@@ -15,6 +15,7 @@
  */
 package io.github.aaravmahajanofficial.auth
 
+import io.github.aaravmahajanofficial.TestcontainersConfiguration
 import io.github.aaravmahajanofficial.users.Role
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
@@ -27,25 +28,17 @@ import org.junit.jupiter.api.assertNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection
+import org.springframework.context.annotation.Import
 import org.springframework.data.repository.findByIdOrNull
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.postgresql.PostgreSQLContainer
 import kotlin.test.assertEquals
 
 @DataJpaTest
+@Import(TestcontainersConfiguration::class)
 class AuthRepositoryTest @Autowired constructor(
     private val testEntityManager: TestEntityManager,
     private val userRepository: UserRepository,
     private val roleRepository: RoleRepository,
 ) {
-
-    companion object {
-        @Container
-        @ServiceConnection
-        val postgres = PostgreSQLContainer("postgres:18-alpine")
-    }
-
     lateinit var testUser: User
 
     @BeforeEach

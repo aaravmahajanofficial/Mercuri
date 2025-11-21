@@ -26,12 +26,9 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.postgresql.PostgreSQLContainer
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
@@ -40,12 +37,6 @@ class AuthIntegrationTests @Autowired constructor(
     val roleRepository: RoleRepository,
     val userRepository: UserRepository,
 ) {
-    companion object {
-        @Container
-        @ServiceConnection
-        val postgres = PostgreSQLContainer("postgres:18-alpine")
-    }
-
     @BeforeEach
     fun setup() {
         if (roleRepository.findByName(RoleType.CUSTOMER) == null) {
