@@ -17,11 +17,12 @@ package io.github.aaravmahajanofficial
 
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
-import org.testcontainers.junit.jupiter.Testcontainers
+import org.springframework.context.annotation.Import
+import org.testcontainers.utility.TestcontainersConfiguration
 
-@Testcontainers
+@Import(TestcontainersConfiguration::class)
 @SpringBootTest
-class ApplicationTests : BaseIntegrationTest() {
+class ApplicationTests {
     @Test
     fun contextLoads() {
     }

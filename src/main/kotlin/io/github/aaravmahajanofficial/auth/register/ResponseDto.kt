@@ -20,7 +20,7 @@ import io.github.aaravmahajanofficial.users.RoleType
 import java.time.Instant
 import java.util.UUID
 
-data class RegisterResponseDto(
+data class ResponseDto(
     val id: UUID,
     val email: String,
     val username: String,

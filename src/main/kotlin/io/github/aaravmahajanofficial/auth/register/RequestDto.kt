@@ -20,7 +20,7 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 
-data class RegisterRequestDto(
+data class RequestDto(
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
     @Size(max = 255)

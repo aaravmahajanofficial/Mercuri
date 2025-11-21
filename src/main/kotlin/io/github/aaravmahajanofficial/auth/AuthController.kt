@@ -15,8 +15,8 @@
  */
 package io.github.aaravmahajanofficial.auth
 
-import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
-import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
+import io.github.aaravmahajanofficial.auth.register.RequestDto
+import io.github.aaravmahajanofficial.auth.register.ResponseDto
 import io.github.aaravmahajanofficial.common.ApiResponse
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -32,9 +32,7 @@ import org.springframework.web.bind.annotation.RestController
 class AuthController(private val authService: AuthService) {
 
     @PostMapping("/register", consumes = [APPLICATION_JSON_VALUE], produces = [APPLICATION_JSON_VALUE])
-    fun register(
-        @Valid @RequestBody requestBody: RegisterRequestDto,
-    ): ResponseEntity<ApiResponse<RegisterResponseDto>> {
+    fun register(@Valid @RequestBody requestBody: RequestDto): ResponseEntity<ApiResponse<ResponseDto>> {
         val registeredUser = authService.register(requestBody)
 
         val response = ApiResponse.success(registeredUser)

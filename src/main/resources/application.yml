@@ -1,4 +1,6 @@
 spring:
+  application:
+    name: "Mercuri"
   datasource:
     url: jdbc:postgresql://localhost:5432/mercuri_db
     username: mercuri_user

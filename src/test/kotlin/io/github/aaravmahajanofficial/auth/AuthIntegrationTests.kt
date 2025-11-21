@@ -15,8 +15,7 @@
  */
 package io.github.aaravmahajanofficial.auth
 
-import io.github.aaravmahajanofficial.BaseIntegrationTest
-import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
+import io.github.aaravmahajanofficial.auth.register.RequestDto
 import io.github.aaravmahajanofficial.users.Role
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
@@ -27,15 +26,25 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
 import org.springframework.http.MediaType
 import org.springframework.test.web.reactive.server.WebTestClient
+import org.testcontainers.junit.jupiter.Container
+import org.testcontainers.postgresql.PostgreSQLContainer
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureWebTestClient
 class AuthIntegrationTests @Autowired constructor(
     val webTestClient: WebTestClient,
     val roleRepository: RoleRepository,
     val userRepository: UserRepository,
-) : BaseIntegrationTest() {
+) {
+    companion object {
+        @Container
+        @ServiceConnection
+        val postgres = PostgreSQLContainer("postgres:18-alpine")
+    }
 
     @BeforeEach
     fun setup() {
@@ -53,7 +62,7 @@ class AuthIntegrationTests @Autowired constructor(
     @Test
     fun `should register a new user successfully`() {
         // Given
-        val request = RegisterRequestDto(
+        val request = RequestDto(
             email = "john.doe@example.com",
             username = "john_doe_123",
             password = "SecureP@ss123",
@@ -99,7 +108,7 @@ class AuthIntegrationTests @Autowired constructor(
 
         // Try to register with same email
 
-        val request = RegisterRequestDto(
+        val request = RequestDto(
             email = "john.doe@example.com",
             username = "john_doe_123",
             password = "SecureP@ss123",
@@ -123,7 +132,7 @@ class AuthIntegrationTests @Autowired constructor(
 
     @Test
     fun `should return 400 Bad Request on validation failure`() {
-        val invalidRequest = RegisterRequestDto(
+        val invalidRequest = RequestDto(
             email = "not-an-email",
             username = "",
             password = "123",
