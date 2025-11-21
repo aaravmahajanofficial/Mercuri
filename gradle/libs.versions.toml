@@ -1,7 +1,6 @@
 [versions]
 # Kotlin and Gradle
 kotlin = "2.2.20"
-jetbrains-annotations = "26.0.2-1"
 
 # Quality
 detekt = "2.0.0-alpha.1"
@@ -16,7 +15,6 @@ spring-dependency-management = "1.1.7"
 kotlin-logging = "7.0.13"
 
 # Testing
-mockk = "1.14.6"
 kotest = "6.0.5"
 mockito-kotlin = "6.1.0"
 
@@ -24,11 +22,9 @@ mockito-kotlin = "6.1.0"
 # Kotlin and Gradle
 kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
-jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
 kotlin-logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlin-logging" }
 
 # Testing
-mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 kotest = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin" }
 
