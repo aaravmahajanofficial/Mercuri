@@ -30,6 +30,15 @@ import java.net.URI
 @RestControllerAdvice
 class GlobalExceptionHandler {
 
+    companion object {
+        private val validationType = URI.create("https://api.example.com/problems/validation")
+        private val mediaTypeType = URI.create("https://api.example.com/problems/unsupported-media-type")
+        private val methodNotAllowedType = URI.create("https://api.example.com/problems/method-not-allowed")
+        private val conflictType = URI.create("https://api.example.com/problems/conflict")
+        private val malformedJsonType = URI.create("https://api.example.com/problems/malformed-json")
+        private val internalType = URI.create("https://api.example.com/problems/internal-server-error")
+    }
+
     private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
 
     // 422 Unprocessable Content
@@ -47,7 +56,7 @@ class GlobalExceptionHandler {
         logger.warn("Validation failed at request {} -> {}", request.requestURL, fieldErrors)
 
         return ProblemDetail.forStatus(HttpStatus.UNPROCESSABLE_CONTENT).apply {
-            type = URI.create("about:blank")
+            type = validationType
             title = "Validation Failed"
             detail = "One or more fields failed validation."
             instance = URI.create(request.requestURL.toString())
@@ -62,7 +71,7 @@ class GlobalExceptionHandler {
         logger.warn("Unsupported media type {} at {}", ex.contentType, request.requestURL)
 
         return ProblemDetail.forStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE).apply {
-            type = URI.create("about:blank")
+            type = mediaTypeType
             title = "Unsupported Media Type"
             detail = "The media type is not supported: ${ex.contentType}"
             instance = URI.create(request.requestURL.toString())
@@ -80,7 +89,7 @@ class GlobalExceptionHandler {
         logger.warn("Method {} not allowed at {}", ex.method, request.requestURL)
 
         return ProblemDetail.forStatus(HttpStatus.METHOD_NOT_ALLOWED).apply {
-            type = URI.create("about:blank")
+            type = methodNotAllowedType
             title = "Method Not Allowed"
             detail = ex.message ?: "This HTTP method is not allowed."
             instance = URI.create(request.requestURL.toString())
@@ -96,7 +105,7 @@ class GlobalExceptionHandler {
         logger.warn("Resource conflict at {} -> {}", request.requestURL, ex.message)
 
         return ProblemDetail.forStatus(HttpStatus.CONFLICT).apply {
-            type = URI.create("about:blank")
+            type = conflictType
             title = "Resource Conflict"
             detail = ex.message ?: "A resource conflict occurred."
             instance = URI.create(request.requestURL.toString())
@@ -109,7 +118,7 @@ class GlobalExceptionHandler {
         logger.warn("Malformed JSON at {} -> {}", request.requestURL, ex.message)
 
         return ProblemDetail.forStatus(HttpStatus.BAD_REQUEST).apply {
-            type = URI.create("about:blank")
+            type = malformedJsonType
             title = "Malformed JSON"
             detail = "Invalid or malformed JSON payload."
             instance = URI.create(request.requestURL.toString())
@@ -124,7 +133,7 @@ class GlobalExceptionHandler {
         logger.error("Missing default role on {}: {}", request.requestURL, ex.message)
 
         return ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR).apply {
-            type = URI.create("about:blank")
+            type = internalType
             title = "System Configuration Error"
             detail = "Missing required default role."
             instance = URI.create(request.requestURL.toString())
@@ -139,7 +148,7 @@ class GlobalExceptionHandler {
         logger.error("Unexpected error occurred on {}: {}", request.requestURL, ex.message, ex)
 
         return ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR).apply {
-            type = URI.create("about:blank")
+            type = internalType
             title = "Internal Server Error"
             detail = "An unexpected error occurred."
             instance = URI.create(request.requestURL.toString())
