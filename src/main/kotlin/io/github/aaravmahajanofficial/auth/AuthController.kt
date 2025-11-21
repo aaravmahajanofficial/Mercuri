@@ -21,6 +21,7 @@ import io.github.aaravmahajanofficial.common.ApiResponse
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
+import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -31,7 +32,11 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/v1/auth")
 class AuthController(private val authService: AuthService) {
 
-    @PostMapping("/register", consumes = [APPLICATION_JSON_VALUE], produces = [APPLICATION_JSON_VALUE])
+    @PostMapping(
+        "/register",
+        consumes = [APPLICATION_JSON_VALUE],
+        produces = [APPLICATION_JSON_VALUE, APPLICATION_PROBLEM_JSON_VALUE],
+    )
     fun register(@Valid @RequestBody requestBody: RequestDto): ResponseEntity<ApiResponse<ResponseDto>> {
         val registeredUser = authService.register(requestBody)
 

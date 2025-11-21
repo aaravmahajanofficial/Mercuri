@@ -15,15 +15,10 @@
  */
 package io.github.aaravmahajanofficial.common
 
-import java.time.Instant
+object LogSanitizer {
 
-sealed class ApiResponse<out T> {
+    const val LENGTH_OF_OUTPUT = 500
 
-    data class Success<T>(val data: T, val meta: Meta = Meta()) : ApiResponse<T>()
-
-    data class Meta(val timestamp: Instant = Instant.now())
-
-    companion object {
-        fun <T> success(data: T): ApiResponse<T> = Success(data)
-    }
+    fun sanitizeLogInput(input: Any?): String =
+        input?.toString()?.take(LENGTH_OF_OUTPUT)?.replace("\n", "_")?.replace("\r", "_")?.replace("\t", "_") ?: ""
 }

@@ -15,96 +15,160 @@
  */
 package io.github.aaravmahajanofficial.common.exception
 
-import io.github.aaravmahajanofficial.common.ApiResponse
+import io.github.aaravmahajanofficial.common.LogSanitizer.sanitizeLogInput
+import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
-import org.springframework.http.ResponseEntity
+import org.springframework.http.ProblemDetail
 import org.springframework.http.converter.HttpMessageNotReadableException
-import org.springframework.validation.FieldError
 import org.springframework.web.HttpMediaTypeNotSupportedException
 import org.springframework.web.HttpRequestMethodNotSupportedException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import java.net.URI
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
 
+    companion object {
+        private val validationType = URI.create("https://api.example.com/problems/validation")
+        private val mediaTypeType = URI.create("https://api.example.com/problems/unsupported-media-type")
+        private val methodNotAllowedType = URI.create("https://api.example.com/problems/method-not-allowed")
+        private val conflictType = URI.create("https://api.example.com/problems/conflict")
+        private val malformedJsonType = URI.create("https://api.example.com/problems/malformed-json")
+        private val internalType = URI.create("https://api.example.com/problems/internal-server-error")
+    }
+
     private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
 
+    // 422 Unprocessable Content
     @ExceptionHandler(MethodArgumentNotValidException::class)
-    fun handleValidationException(ex: MethodArgumentNotValidException): ResponseEntity<ApiResponse<Nothing?>> {
-        val errors = ex.bindingResult.allErrors.filterIsInstance<FieldError>()
-            .associate { it.field to (it.defaultMessage ?: "Invalid Value") }
+    fun handleValidationException(ex: MethodArgumentNotValidException, request: HttpServletRequest): ProblemDetail {
+        val fieldErrors = ex.bindingResult.fieldErrors.map { error ->
+            mapOf(
+                "field" to error.field,
+                "message" to (error.defaultMessage ?: "Invalid Value"),
+                "code" to (error.code ?: "Invalid"),
+            )
+        }
 
-        logger.warn("Validation errors: {}", errors)
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-            .body(ApiResponse.error("VALIDATION_FAILED", errors))
-    }
-
-    @ExceptionHandler(HttpMediaTypeNotSupportedException::class)
-    fun handleMediaTypeException(ex: HttpMediaTypeNotSupportedException): ResponseEntity<ApiResponse<Nothing?>> {
-        logger.warn("Unsupported media type: {}", ex.contentType)
-        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(
-            ApiResponse.error(
-                "UNSUPPORTED_MEDIA_TYPE",
-                mapOf("error" to "Unsupported media type: ${ex.contentType}"),
-            ),
+        logger.warn(
+            "Validation failed at request {} -> {}",
+            sanitizeLogInput(request.requestURL),
+            sanitizeLogInput(fieldErrors),
         )
+
+        return ProblemDetail.forStatus(HttpStatus.UNPROCESSABLE_CONTENT).apply {
+            type = validationType
+            title = "Validation Failed"
+            detail = "One or more fields failed validation."
+            instance = URI.create(request.requestURL.toString())
+
+            setProperty("validationErrors", fieldErrors)
+        }
     }
 
+    // 415 Media Type Not Supported
+    @ExceptionHandler(HttpMediaTypeNotSupportedException::class)
+    fun handleMediaTypeException(ex: HttpMediaTypeNotSupportedException, request: HttpServletRequest): ProblemDetail {
+        logger.warn(
+            "Unsupported media type {} at {}",
+            sanitizeLogInput(ex.contentType),
+            sanitizeLogInput(request.requestURL),
+        )
+
+        return ProblemDetail.forStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE).apply {
+            type = mediaTypeType
+            title = "Unsupported Media Type"
+            detail = "The media type is not supported: ${ex.contentType}"
+            instance = URI.create(request.requestURL.toString())
+
+            setProperty("mediaType", ex.contentType)
+        }
+    }
+
+    // 405 Method Not Allowed
     @ExceptionHandler(HttpRequestMethodNotSupportedException::class)
     fun handleMethodNotAllowedException(
         ex: HttpRequestMethodNotSupportedException,
-    ): ResponseEntity<ApiResponse<Nothing?>> {
-        logger.warn("Method not allowed: {}", ex.message)
-        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(
-            ApiResponse.error(
-                "METHOD_NOT_ALLOWED",
-                mapOf("error" to "Method not allowed: ${ex.message}"),
-            ),
-        )
+        request: HttpServletRequest,
+    ): ProblemDetail {
+        logger.warn("Method {} not allowed at {}", sanitizeLogInput(ex.method), sanitizeLogInput(request.requestURL))
+
+        return ProblemDetail.forStatus(HttpStatus.METHOD_NOT_ALLOWED).apply {
+            type = methodNotAllowedType
+            title = "Method Not Allowed"
+            detail = ex.message ?: "This HTTP method is not allowed."
+            instance = URI.create(request.requestURL.toString())
+
+            setProperty("rejectedMethod", ex.method)
+            setProperty("allowedMethods", ex.supportedHttpMethods?.map { it.name() })
+        }
     }
 
+    // 409 Conflict
     @ExceptionHandler(ResourceConflictException::class)
-    fun handleResourceConflictException(ex: ResourceConflictException): ResponseEntity<ApiResponse<Nothing?>> {
-        logger.warn("Resource conflict: {}", ex.message)
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(
-            ApiResponse.error(
-                "RESOURCE_CONFLICT",
-                mapOf("error" to "Resource conflict: ${ex.message}"),
-            ),
-        )
+    fun handleResourceConflictException(ex: ResourceConflictException, request: HttpServletRequest): ProblemDetail {
+        logger.warn("Resource conflict at {} -> {}", sanitizeLogInput(request.requestURL), sanitizeLogInput(ex.message))
+
+        return ProblemDetail.forStatus(HttpStatus.CONFLICT).apply {
+            type = conflictType
+            title = "Resource Conflict"
+            detail = ex.message ?: "A resource conflict occurred."
+            instance = URI.create(request.requestURL.toString())
+        }
     }
 
+    // 400 Malformed JSON
     @ExceptionHandler(HttpMessageNotReadableException::class)
-    fun handleMalformedJson(ex: HttpMessageNotReadableException): ResponseEntity<ApiResponse<Nothing?>> {
-        logger.warn("Malformed JSON request: {}", ex.message)
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-            ApiResponse.error(
-                "MALFORMED_JSON",
-                mapOf("error" to "Malformed JSON request: ${ex.message}"),
-            ),
-        )
+    fun handleMalformedJson(ex: HttpMessageNotReadableException, request: HttpServletRequest): ProblemDetail {
+        logger.warn("Malformed JSON at {} -> {}", sanitizeLogInput(request.requestURL), sanitizeLogInput(ex.message))
+
+        return ProblemDetail.forStatus(HttpStatus.BAD_REQUEST).apply {
+            type = malformedJsonType
+            title = "Malformed JSON"
+            detail = "Invalid or malformed JSON payload."
+            instance = URI.create(request.requestURL.toString())
+
+            setProperty("cause", ex.mostSpecificCause.message)
+        }
     }
 
-    @ExceptionHandler(Exception::class)
-    fun handleGeneralException(ex: Exception): ResponseEntity<ApiResponse<Nothing?>> {
-        logger.error("Unexpected error occurred", ex)
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(
-                ApiResponse.error(
-                    "INTERNAL_SERVER_ERROR",
-                    mapOf("error" to "An unexpected error occurred"),
-                ),
-            )
-    }
-
+    // 500 Internal Server Error - Missing default role
     @ExceptionHandler(DefaultRoleNotFoundException::class)
-    fun handleMissingRole(ex: DefaultRoleNotFoundException): ResponseEntity<ApiResponse<Nothing?>> {
-        logger.error("Missing default role: {}", ex.message)
+    fun handleMissingRole(ex: DefaultRoleNotFoundException, request: HttpServletRequest): ProblemDetail {
+        logger.error(
+            "Missing default role on {}: {}",
+            sanitizeLogInput(request.requestURL),
+            sanitizeLogInput(ex.message),
+        )
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ApiResponse.error("INTERNAL_SERVER_ERROR", mapOf("error" to "System configuration error")))
+        return ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR).apply {
+            type = internalType
+            title = "System Configuration Error"
+            detail = "Missing required default role."
+            instance = URI.create(request.requestURL.toString())
+
+            setProperty("role", "Default role missing")
+        }
+    }
+
+    // 500 Internal Server Error (Catch-all)
+    @ExceptionHandler(Exception::class)
+    fun handleGeneralException(ex: Exception, request: HttpServletRequest): ProblemDetail {
+        logger.error(
+            "Unexpected error occurred on {}: {}",
+            sanitizeLogInput(request.requestURL),
+            sanitizeLogInput(ex.message),
+            ex,
+        )
+
+        return ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR).apply {
+            type = internalType
+            title = "Internal Server Error"
+            detail = "An unexpected error occurred."
+            instance = URI.create(request.requestURL.toString())
+        }
     }
 }
