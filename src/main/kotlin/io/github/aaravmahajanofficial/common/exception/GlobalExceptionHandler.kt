@@ -15,6 +15,7 @@
  */
 package io.github.aaravmahajanofficial.common.exception
 
+import io.github.aaravmahajanofficial.common.LogSanitizer.sanitizeLogInput
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -53,7 +54,11 @@ class GlobalExceptionHandler {
             )
         }
 
-        logger.warn("Validation failed at request {} -> {}", request.requestURL, fieldErrors)
+        logger.warn(
+            "Validation failed at request {} -> {}",
+            sanitizeLogInput(request.requestURL),
+            sanitizeLogInput(fieldErrors),
+        )
 
         return ProblemDetail.forStatus(HttpStatus.UNPROCESSABLE_CONTENT).apply {
             type = validationType
@@ -68,7 +73,11 @@ class GlobalExceptionHandler {
     // 415 Media Type Not Supported
     @ExceptionHandler(HttpMediaTypeNotSupportedException::class)
     fun handleMediaTypeException(ex: HttpMediaTypeNotSupportedException, request: HttpServletRequest): ProblemDetail {
-        logger.warn("Unsupported media type {} at {}", ex.contentType, request.requestURL)
+        logger.warn(
+            "Unsupported media type {} at {}",
+            sanitizeLogInput(ex.contentType),
+            sanitizeLogInput(request.requestURL),
+        )
 
         return ProblemDetail.forStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE).apply {
             type = mediaTypeType
@@ -86,7 +95,7 @@ class GlobalExceptionHandler {
         ex: HttpRequestMethodNotSupportedException,
         request: HttpServletRequest,
     ): ProblemDetail {
-        logger.warn("Method {} not allowed at {}", ex.method, request.requestURL)
+        logger.warn("Method {} not allowed at {}", sanitizeLogInput(ex.method), sanitizeLogInput(request.requestURL))
 
         return ProblemDetail.forStatus(HttpStatus.METHOD_NOT_ALLOWED).apply {
             type = methodNotAllowedType
@@ -102,7 +111,7 @@ class GlobalExceptionHandler {
     // 409 Conflict
     @ExceptionHandler(ResourceConflictException::class)
     fun handleResourceConflictException(ex: ResourceConflictException, request: HttpServletRequest): ProblemDetail {
-        logger.warn("Resource conflict at {} -> {}", request.requestURL, ex.message)
+        logger.warn("Resource conflict at {} -> {}", sanitizeLogInput(request.requestURL), sanitizeLogInput(ex.message))
 
         return ProblemDetail.forStatus(HttpStatus.CONFLICT).apply {
             type = conflictType
@@ -115,7 +124,7 @@ class GlobalExceptionHandler {
     // 400 Malformed JSON
     @ExceptionHandler(HttpMessageNotReadableException::class)
     fun handleMalformedJson(ex: HttpMessageNotReadableException, request: HttpServletRequest): ProblemDetail {
-        logger.warn("Malformed JSON at {} -> {}", request.requestURL, ex.message)
+        logger.warn("Malformed JSON at {} -> {}", sanitizeLogInput(request.requestURL), sanitizeLogInput(ex.message))
 
         return ProblemDetail.forStatus(HttpStatus.BAD_REQUEST).apply {
             type = malformedJsonType
@@ -130,7 +139,11 @@ class GlobalExceptionHandler {
     // 500 Internal Server Error - Missing default role
     @ExceptionHandler(DefaultRoleNotFoundException::class)
     fun handleMissingRole(ex: DefaultRoleNotFoundException, request: HttpServletRequest): ProblemDetail {
-        logger.error("Missing default role on {}: {}", request.requestURL, ex.message)
+        logger.error(
+            "Missing default role on {}: {}",
+            sanitizeLogInput(request.requestURL),
+            sanitizeLogInput(ex.message),
+        )
 
         return ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR).apply {
             type = internalType
@@ -145,7 +158,12 @@ class GlobalExceptionHandler {
     // 500 Internal Server Error (Catch-all)
     @ExceptionHandler(Exception::class)
     fun handleGeneralException(ex: Exception, request: HttpServletRequest): ProblemDetail {
-        logger.error("Unexpected error occurred on {}: {}", request.requestURL, ex.message, ex)
+        logger.error(
+            "Unexpected error occurred on {}: {}",
+            sanitizeLogInput(request.requestURL),
+            sanitizeLogInput(ex.message),
+            ex,
+        )
 
         return ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR).apply {
             type = internalType
