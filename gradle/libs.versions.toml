@@ -19,9 +19,7 @@ kotest = "6.0.5"
 mockito-kotlin = "6.1.0"
 
 [libraries]
-# Kotlin and Gradle
-kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
-kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+# Kotlin
 kotlin-logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlin-logging" }
 
 # Testing
