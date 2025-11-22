@@ -180,8 +180,8 @@ class LoginIntegrationTests @Autowired constructor(
     fun `should fail with 401 Unauthorized when user is suspended`() {
         // Given
         val suspendedUser = User(
-            email = "valid_user@example.com",
-            username = "valid_user_123",
+            email = "suspended_user@example.com",
+            username = "suspended_user_123",
             passwordHash = passwordEncoder.encode("StrongP@ss1")!!,
             firstName = "Test",
             lastName = "User",
@@ -192,7 +192,7 @@ class LoginIntegrationTests @Autowired constructor(
         userRepository.save(suspendedUser)
 
         val request = LoginRequestDto(
-            id = "valid-user@example.com",
+            id = "valid_user@example.com",
             password = "StrongP@ss1",
         )
 
@@ -217,8 +217,8 @@ class LoginIntegrationTests @Autowired constructor(
     fun `should fail with 403 Forbidden when user hasn't verified the email`() {
         // Given
         val unverifiedUser = User(
-            email = "valid_user@example.com",
-            username = "valid_user_123",
+            email = "unverified_user@example.com",
+            username = "unverified_user_123",
             passwordHash = passwordEncoder.encode("StrongP@ss1")!!,
             firstName = "Test",
             lastName = "User",
@@ -229,7 +229,7 @@ class LoginIntegrationTests @Autowired constructor(
         userRepository.save(unverifiedUser)
 
         val request = LoginRequestDto(
-            id = "valid-user@example.com",
+            id = "valid_user@example.com",
             password = "StrongP@ss1",
         )
 
@@ -252,7 +252,7 @@ class LoginIntegrationTests @Autowired constructor(
 
     @Test
     fun `should return 422 Unprocessable Content on validation failure`() {
-        // verifies that the framework actually triggers the validation logic during a real request
+        // Verifies that the framework actually triggers the validation logic during a real request
         val request = mapOf("id" to "")
 
         // When
