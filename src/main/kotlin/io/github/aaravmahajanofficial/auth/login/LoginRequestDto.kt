@@ -13,14 +13,17 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.auth
+package io.github.aaravmahajanofficial.auth.login
 
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Size
 
 data class LoginRequestDto(
-    @NotBlank(message = "Login identifier (email or username) is required")
+    @NotBlank(message = "Username or email is required")
+    @Size(min = 3, max = 255, message = "Username or email must be between 3 and 255 characters")
     val id: String,
 
     @NotBlank(message = "Password is required")
+    @Size(min = 8, max = 128, message = "Password must be between 8 and 128 characters")
     val password: String,
 )

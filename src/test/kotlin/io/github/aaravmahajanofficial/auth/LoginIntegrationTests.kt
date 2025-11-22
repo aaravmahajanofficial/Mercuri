@@ -16,6 +16,7 @@
 package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.TestcontainersConfiguration
+import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.users.Role
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType

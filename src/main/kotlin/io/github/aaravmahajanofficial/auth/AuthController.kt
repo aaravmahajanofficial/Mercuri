@@ -40,10 +40,8 @@ class AuthController(private val authService: AuthService) {
     fun register(@Valid @RequestBody requestBody: RequestDto): ResponseEntity<ApiResponse<ResponseDto>> {
         val registeredUser = authService.register(requestBody)
 
-        val response = ApiResponse.success(registeredUser)
-
         return ResponseEntity
             .status(HttpStatus.CREATED)
-            .body(response)
+            .body(ApiResponse.success(registeredUser))
     }
 }
