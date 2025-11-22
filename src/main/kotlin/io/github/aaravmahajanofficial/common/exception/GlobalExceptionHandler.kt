@@ -85,6 +85,7 @@ class GlobalExceptionHandler {
             instance = URI.create(request.requestURL.toString())
 
             setProperty("mediaType", ex.contentType)
+            setProperty("supported", ex.supportedMediaTypes.map { it.toString() })
         }
     }
 
