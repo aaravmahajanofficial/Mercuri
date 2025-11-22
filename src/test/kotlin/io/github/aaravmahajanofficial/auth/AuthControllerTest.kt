@@ -15,6 +15,7 @@
  */
 package io.github.aaravmahajanofficial.auth
 
+import io.github.aaravmahajanofficial.AbstractControllerTest
 import io.github.aaravmahajanofficial.auth.register.RequestDto
 import io.github.aaravmahajanofficial.auth.register.ResponseDto
 import io.github.aaravmahajanofficial.common.exception.ResourceConflictException
@@ -44,7 +45,8 @@ import kotlin.test.assertEquals
 
 @WebMvcTest(AuthController::class)
 @AutoConfigureMockMvc(addFilters = false)
-class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val objectMapper: ObjectMapper) {
+class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val objectMapper: ObjectMapper) :
+    AbstractControllerTest() {
     @MockitoBean
     lateinit var authService: AuthService
 
@@ -118,22 +120,13 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
         val request = "{ invalid"
 
         // When & Then
-        mockMvc.post("/api/v1/auth/register") {
+        val result = mockMvc.post("/api/v1/auth/register") {
             contentType = APPLICATION_JSON
             content = request
             accept = APPLICATION_PROBLEM_JSON
-        }.andExpect {
-            status { isBadRequest() }
-            content { contentType(APPLICATION_PROBLEM_JSON) }
-
-            jsonPath("$.type") { value("https://api.example.com/problems/malformed-json") }
-            jsonPath("$.status") { value(400) }
-            jsonPath("$.title") { value("Malformed JSON") }
-            jsonPath("$.detail") { value("Invalid or malformed JSON payload.") }
-            jsonPath("$.instance") { value("http://localhost/api/v1/auth/register") }
-
-            jsonPath("$.cause") { exists() }
         }
+
+        assertBadRequest(result, "http://localhost/api/v1/auth/register")
 
         verify(authService, never()).register(any())
     }
@@ -143,18 +136,13 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
         // Given
 
         // When & Then
-        mockMvc.get("/api/v1/auth/register") {
+        val result = mockMvc.get("/api/v1/auth/register") {
             accept = APPLICATION_PROBLEM_JSON
-        }.andExpect {
-            status { isMethodNotAllowed() }
-            content { contentType(APPLICATION_PROBLEM_JSON) }
+        }
 
-            jsonPath("$.type") { value("https://api.example.com/problems/method-not-allowed") }
-            jsonPath("$.status") { value(405) }
-            jsonPath("$.title") { value("Method Not Allowed") }
-            jsonPath("$.detail") { exists() }
-            jsonPath("$.instance") { value("http://localhost/api/v1/auth/register") }
+        assertMethodNotAllowed(result, "http://localhost/api/v1/auth/register")
 
+        result.andExpect {
             jsonPath("$.rejectedMethod") { value("GET") }
             jsonPath("$.allowedMethods[0]") { value("POST") }
         }
@@ -168,22 +156,13 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
         val request = createValidRegisterRequest()
 
         // When & Then
-        mockMvc.post("/api/v1/auth/register") {
+        val result = mockMvc.post("/api/v1/auth/register") {
             contentType = APPLICATION_XML
             content = objectMapper.writeValueAsString(request)
             accept = APPLICATION_PROBLEM_JSON
-        }.andExpect {
-            status { isUnsupportedMediaType() }
-            content { contentType(APPLICATION_PROBLEM_JSON) }
-
-            jsonPath("$.type") { value("https://api.example.com/problems/unsupported-media-type") }
-            jsonPath("$.status") { value(415) }
-            jsonPath("$.title") { value("Unsupported Media Type") }
-            jsonPath("$.detail") { exists() }
-            jsonPath("$.instance") { value("http://localhost/api/v1/auth/register") }
-
-            jsonPath("$.mediaType") { exists() }
         }
+
+        assertUnsupportedMediaType(result, "http://localhost/api/v1/auth/register")
 
         verify(authService, never()).register(any())
     }
@@ -236,20 +215,13 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
         whenever(authService.register(any())).thenThrow(ResourceConflictException("Email already in use"))
 
         // When & Then
-        mockMvc.post("/api/v1/auth/register") {
+        val result = mockMvc.post("/api/v1/auth/register") {
             contentType = APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
             accept = APPLICATION_PROBLEM_JSON
-        }.andExpect {
-            status { isConflict() }
-            content { contentType(APPLICATION_PROBLEM_JSON) }
-
-            jsonPath("$.type") { value("https://api.example.com/problems/conflict") }
-            jsonPath("$.status") { value(409) }
-            jsonPath("$.title") { value("Resource Conflict") }
-            jsonPath("$.detail") { value("Email already in use") }
-            jsonPath("$.instance") { value("http://localhost/api/v1/auth/register") }
         }
+
+        assertConflict(result, "Email already in use", "http://localhost/api/v1/auth/register")
 
         verify(authService, times(1)).register(any())
     }
@@ -262,20 +234,13 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
         whenever(authService.register(any())).thenThrow(ResourceConflictException("Username already in use"))
 
         // When & Then
-        mockMvc.post("/api/v1/auth/register") {
+        val result = mockMvc.post("/api/v1/auth/register") {
             contentType = APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
             accept = APPLICATION_PROBLEM_JSON
-        }.andExpect {
-            status { isConflict() }
-            content { contentType(APPLICATION_PROBLEM_JSON) }
-
-            jsonPath("$.type") { value("https://api.example.com/problems/conflict") }
-            jsonPath("$.status") { value(409) }
-            jsonPath("$.title") { value("Resource Conflict") }
-            jsonPath("$.detail") { value("Username already in use") }
-            jsonPath("$.instance") { value("http://localhost/api/v1/auth/register") }
         }
+
+        assertConflict(result, "Username already in use", "http://localhost/api/v1/auth/register")
 
         verify(authService, times(1)).register(any())
     }
@@ -288,20 +253,13 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
         whenever(authService.register(any())).thenThrow(RuntimeException("Unexpected connection failure"))
 
         // When & Then
-        mockMvc.post("/api/v1/auth/register") {
+        val result = mockMvc.post("/api/v1/auth/register") {
             contentType = APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
             accept = APPLICATION_PROBLEM_JSON
-        }.andExpect {
-            status { is5xxServerError() }
-            content { contentType(APPLICATION_PROBLEM_JSON) }
-
-            jsonPath("$.type") { value("https://api.example.com/problems/internal-server-error") }
-            jsonPath("$.status") { value(500) }
-            jsonPath("$.title") { value("Internal Server Error") }
-            jsonPath("$.detail") { value("An unexpected error occurred.") }
-            jsonPath("$.instance") { value("http://localhost/api/v1/auth/register") }
         }
+
+        assertInternalServerError(result, "http://localhost/api/v1/auth/register")
 
         verify(authService, times(1)).register(any())
     }
