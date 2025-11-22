@@ -15,6 +15,8 @@
  */
 package io.github.aaravmahajanofficial.auth
 
+import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
+import io.github.aaravmahajanofficial.auth.login.LoginResponseDto
 import io.github.aaravmahajanofficial.auth.register.RequestDto
 import io.github.aaravmahajanofficial.auth.register.ResponseDto
 import io.github.aaravmahajanofficial.common.ApiResponse
@@ -38,10 +40,21 @@ class AuthController(private val authService: AuthService) {
         produces = [APPLICATION_JSON_VALUE, APPLICATION_PROBLEM_JSON_VALUE],
     )
     fun register(@Valid @RequestBody requestBody: RequestDto): ResponseEntity<ApiResponse<ResponseDto>> {
-        val registeredUser = authService.register(requestBody)
-
+        val user = authService.register(requestBody)
         return ResponseEntity
             .status(HttpStatus.CREATED)
-            .body(ApiResponse.success(registeredUser))
+            .body(ApiResponse.Success(user))
+    }
+
+    @PostMapping(
+        "/login",
+        consumes = [APPLICATION_JSON_VALUE],
+        produces = [APPLICATION_JSON_VALUE, APPLICATION_PROBLEM_JSON_VALUE],
+    )
+    fun login(@Valid @RequestBody requestBody: LoginRequestDto): ResponseEntity<ApiResponse<LoginResponseDto>> {
+        val user = authService.login(requestBody)
+        return ResponseEntity
+            .status(HttpStatus.OK)
+            .body(ApiResponse.Success(user))
     }
 }

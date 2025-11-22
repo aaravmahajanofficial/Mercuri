@@ -13,12 +13,6 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.users
+package io.github.aaravmahajanofficial.common.exception
 
-import com.fasterxml.jackson.annotation.JsonValue
-
-enum class UserStatus(@get:JsonValue val value: String) {
-    ACTIVE("active"),
-    SUSPENDED("suspended"),
-    DELETED("deleted"),
-}
+open class AuthenticationFailedException(message: String) : RuntimeException(message)

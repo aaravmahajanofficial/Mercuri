@@ -73,10 +73,10 @@ class LoginIntegrationTests @Autowired constructor(
     }
 
     @Test
-    fun `should login successfully with valid email`() {
+    fun `should return 200 OK when login successful with valid email`() {
         // Given
         val request = LoginRequestDto(
-            id = "valid.user@example.com",
+            email = "valid.user@example.com",
             password = "StrongP@ss1",
         )
 
@@ -91,19 +91,20 @@ class LoginIntegrationTests @Autowired constructor(
             .expectHeader()
             .contentType(APPLICATION_JSON)
             .expectBody()
-            .jsonPath("$.data.token").isNotEmpty
-            .jsonPath("$.data.email").isEqualTo(activeUser.email)
-            .jsonPath("$.data.username").isEqualTo(activeUser.username)
-            .jsonPath("$.data.status").isEqualTo(AuthStatus.PENDING_VERIFICATION)
-            .jsonPath("$.data.roles").isEqualTo(listOf(RoleType.CUSTOMER.name))
+            .jsonPath("$.data.accessToken").exists()
+            .jsonPath("$.data.tokenType").isEqualTo("Bearer")
+            .jsonPath("$.data.expiresIn").exists()
+            .jsonPath("$.data.user").exists()
+            .jsonPath("$.data.user.id").isNotEmpty
+            .jsonPath("$.data.user.email").isEqualTo(request.email)
             .jsonPath("$.meta.timestamp").isNotEmpty
     }
 
     @Test
-    fun `should login successfully with valid username`() { // test database has a UNIQUE constraint
+    fun `should return 200 OK when login successful with valid username`() { // test database has a UNIQUE constraint
         // Given
         val request = LoginRequestDto(
-            id = "valid_user_123",
+            username = "valid_user_123",
             password = "StrongP@ss1",
         )
 
@@ -118,11 +119,12 @@ class LoginIntegrationTests @Autowired constructor(
             .expectHeader()
             .contentType(APPLICATION_JSON)
             .expectBody()
-            .jsonPath("$.data.token").isNotEmpty
-            .jsonPath("$.data.email").isEqualTo(activeUser.email)
-            .jsonPath("$.data.username").isEqualTo(activeUser.username)
-            .jsonPath("$.data.status").isEqualTo(AuthStatus.PENDING_VERIFICATION)
-            .jsonPath("$.data.roles").isEqualTo(listOf(RoleType.CUSTOMER.name))
+            .jsonPath("$.data.accessToken").exists()
+            .jsonPath("$.data.tokenType").isEqualTo("Bearer")
+            .jsonPath("$.data.expiresIn").exists()
+            .jsonPath("$.data.user").exists()
+            .jsonPath("$.data.user.id").isNotEmpty
+            .jsonPath("$.data.user.email").isEqualTo(request.email)
             .jsonPath("$.meta.timestamp").isNotEmpty
     }
 
@@ -130,7 +132,7 @@ class LoginIntegrationTests @Autowired constructor(
     fun `should fail with 401 Unauthorized for invalid password`() {
         // Given
         val request = LoginRequestDto(
-            id = "valid_user_123",
+            username = "valid_user_123",
             password = "wrong-password",
         )
 
@@ -155,7 +157,7 @@ class LoginIntegrationTests @Autowired constructor(
     fun `should fail with 401 Unauthorized for non-existent user`() {
         // Given
         val request = LoginRequestDto(
-            id = "ghostUser@example.com",
+            email = "ghostUser@example.com",
             password = "StrongP@ss1",
         )
 
@@ -192,7 +194,7 @@ class LoginIntegrationTests @Autowired constructor(
         userRepository.save(suspendedUser)
 
         val request = LoginRequestDto(
-            id = "valid_user@example.com",
+            email = "valid_user@example.com",
             password = "StrongP@ss1",
         )
 
@@ -229,7 +231,7 @@ class LoginIntegrationTests @Autowired constructor(
         userRepository.save(unverifiedUser)
 
         val request = LoginRequestDto(
-            id = "valid_user@example.com",
+            email = "valid_user@example.com",
             password = "StrongP@ss1",
         )
 

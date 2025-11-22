@@ -82,9 +82,9 @@ class AuthIntegrationTests @Autowired constructor(
             .jsonPath("$.data.phoneNumber").isEqualTo(request.phoneNumber)
             .jsonPath("$.data.status").isEqualTo(AuthStatus.PENDING_VERIFICATION)
             .jsonPath("$.data.emailVerified").isEqualTo(false)
-            .jsonPath("$.data.roles").isEqualTo(listOf(RoleType.CUSTOMER.name))
-            .jsonPath("$.meta.timestamp").isNotEmpty
+            .jsonPath("$.data.roles").isEqualTo(listOf(RoleType.CUSTOMER.value))
             .jsonPath("$.data.createdAt").isNotEmpty
+            .jsonPath("$.meta.timestamp").isNotEmpty
     }
 
     @Test

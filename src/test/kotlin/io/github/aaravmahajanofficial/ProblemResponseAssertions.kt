@@ -18,7 +18,7 @@ package io.github.aaravmahajanofficial
 import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.test.web.servlet.ResultActionsDsl
 
-open class AbstractControllerTest {
+open class ProblemResponseAssertions {
 
     fun assertProblem(
         result: ResultActionsDsl,
@@ -74,6 +74,17 @@ open class AbstractControllerTest {
         }
     }
 
+    fun assertUnauthorized(result: ResultActionsDsl, detail: String, instance: String? = null) {
+        assertProblem(
+            result = result,
+            expectedStatus = 401,
+            expectedType = "https://api.example.com/problems/unauthorized",
+            expectedTitle = "Authentication Failed",
+            expectedDetail = detail,
+            expectedInstance = instance,
+        )
+    }
+
     fun assertConflict(result: ResultActionsDsl, detail: String, instance: String? = null) {
         assertProblem(
             result = result,
@@ -98,6 +109,17 @@ open class AbstractControllerTest {
             jsonPath("$.mediaType") { exists() }
             jsonPath("$.supported") { exists() }
         }
+    }
+
+    fun assertUnprocessableEntity(result: ResultActionsDsl, instance: String? = null) {
+        assertProblem(
+            result = result,
+            expectedType = "https://api.example.com/problems/validation",
+            expectedStatus = 422,
+            expectedTitle = "Validation Failed",
+            expectedDetail = "One or more fields failed validation.",
+            expectedInstance = instance,
+        )
     }
 
     fun assertInternalServerError(result: ResultActionsDsl, instance: String? = null) {

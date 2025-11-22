@@ -16,6 +16,8 @@
 package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.auth.events.UserRegisteredEvent
+import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
+import io.github.aaravmahajanofficial.auth.login.LoginResponseDto
 import io.github.aaravmahajanofficial.auth.register.RequestDto
 import io.github.aaravmahajanofficial.auth.register.ResponseDto
 import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
@@ -79,4 +81,6 @@ class AuthService(
             roles = savedUser.roles.map { it.name },
         )
     }
+
+    fun login(requestBody: LoginRequestDto): LoginResponseDto = TODO()
 }

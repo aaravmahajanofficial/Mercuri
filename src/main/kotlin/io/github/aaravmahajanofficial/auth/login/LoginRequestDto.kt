@@ -15,13 +15,17 @@
  */
 package io.github.aaravmahajanofficial.auth.login
 
+import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 
 data class LoginRequestDto(
-    @NotBlank(message = "Username or email is required")
     @Size(min = 3, max = 255, message = "Username or email must be between 3 and 255 characters")
-    val id: String,
+    val username: String? = null,
+
+    @Email(message = "Invalid email format")
+    @Size(max = 255)
+    val email: String? = null,
 
     @NotBlank(message = "Password is required")
     @Size(min = 8, max = 128, message = "Password must be between 8 and 128 characters")

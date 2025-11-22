@@ -15,9 +15,11 @@
  */
 package io.github.aaravmahajanofficial.users
 
-enum class RoleType {
-    CUSTOMER,
-    SELLER,
-    ADMIN,
-    SUPER_ADMIN,
+import com.fasterxml.jackson.annotation.JsonValue
+
+enum class RoleType(@get:JsonValue val value: String) {
+    CUSTOMER("customer"),
+    SELLER("seller"),
+    ADMIN("admin"),
+    SUPER_ADMIN("super_admin"),
 }

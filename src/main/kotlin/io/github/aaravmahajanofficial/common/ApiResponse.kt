@@ -19,11 +19,7 @@ import java.time.Instant
 
 sealed class ApiResponse<out T> {
 
-    data class Success<T>(val data: T, val meta: Meta = Meta()) : ApiResponse<T>()
-
     data class Meta(val timestamp: Instant = Instant.now())
 
-    companion object {
-        fun <T> success(data: T): ApiResponse<T> = Success(data)
-    }
+    data class Success<T>(val data: T, val meta: Meta = Meta()) : ApiResponse<T>()
 }

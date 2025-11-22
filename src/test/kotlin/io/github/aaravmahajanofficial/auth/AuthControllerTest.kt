@@ -15,14 +15,20 @@
  */
 package io.github.aaravmahajanofficial.auth
 
-import io.github.aaravmahajanofficial.AbstractControllerTest
+import io.github.aaravmahajanofficial.ProblemResponseAssertions
+import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
+import io.github.aaravmahajanofficial.auth.login.LoginResponseDto
+import io.github.aaravmahajanofficial.auth.login.UserDto
 import io.github.aaravmahajanofficial.auth.register.RequestDto
 import io.github.aaravmahajanofficial.auth.register.ResponseDto
+import io.github.aaravmahajanofficial.common.exception.AuthenticationFailedException
 import io.github.aaravmahajanofficial.common.exception.ResourceConflictException
 import io.github.aaravmahajanofficial.users.RoleType
+import io.github.aaravmahajanofficial.users.UserStatus
 import org.hamcrest.CoreMatchers.hasItem
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNull
 import org.mockito.kotlin.any
 import org.mockito.kotlin.check
 import org.mockito.kotlin.never
@@ -47,7 +53,8 @@ import kotlin.test.assertEquals
 @WebMvcTest(AuthController::class)
 @AutoConfigureMockMvc(addFilters = false)
 class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val objectMapper: ObjectMapper) :
-    AbstractControllerTest() {
+    ProblemResponseAssertions() {
+
     @MockitoBean
     lateinit var authService: AuthService
 
@@ -60,6 +67,24 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
             lastName: String = "Doe",
             phoneNumber: String = "+1234567890",
         ) = RequestDto(email, username, password, firstName, lastName, phoneNumber)
+
+        fun createMockUser(
+            id: UUID = UUID.randomUUID(),
+            email: String = "john.doe@example.com",
+            username: String = "john_doe_123",
+            firstName: String = "John",
+            lastName: String = "Doe",
+            phoneNumber: String = "+1234567890",
+            emailVerified: Boolean = true,
+            phoneVerified: Boolean = true,
+            status: UserStatus = UserStatus.ACTIVE,
+            createdAt: Instant = Instant.now(),
+            lastLoginAt: Instant = Instant.now(),
+            roles: List<RoleType> = listOf(RoleType.CUSTOMER),
+        ) = UserDto(
+            id, email, username, firstName, lastName, phoneNumber, emailVerified, phoneVerified, status, createdAt,
+            lastLoginAt, roles,
+        )
     }
 
     @Nested
@@ -97,10 +122,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
                 jsonPath("$.data.phoneNumber") { value(serviceResponse.phoneNumber) }
                 jsonPath("$.data.status") { value(serviceResponse.status.value) }
                 jsonPath("$.data.emailVerified") { value(serviceResponse.emailVerified) }
-
-                jsonPath("$.data.roles") { value(hasItem(RoleType.CUSTOMER.name)) }
-
-                jsonPath("$.meta.timestamp") { exists() }
+                jsonPath("$.data.roles") { value(hasItem(RoleType.CUSTOMER.value)) }
                 jsonPath("$.data.createdAt") { exists() }
             }
 
@@ -129,7 +151,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
                 accept = APPLICATION_PROBLEM_JSON
             }
 
-            assertBadRequest(result, "http://localhost/api/v1/auth/register")
+            assertBadRequest(result, "/api/v1/auth/register")
 
             verify(authService, never()).register(any())
         }
@@ -143,7 +165,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
                 accept = APPLICATION_PROBLEM_JSON
             }
 
-            assertMethodNotAllowed(result, "http://localhost/api/v1/auth/register")
+            assertMethodNotAllowed(result, "/api/v1/auth/register")
 
             result.andExpect {
                 jsonPath("$.rejectedMethod") { value("GET") }
@@ -165,7 +187,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
                 accept = APPLICATION_PROBLEM_JSON
             }
 
-            assertUnsupportedMediaType(result, "http://localhost/api/v1/auth/register")
+            assertUnsupportedMediaType(result, "/api/v1/auth/register")
 
             verify(authService, never()).register(any())
         }
@@ -182,23 +204,18 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
                 phoneNumber = "abc",
             )
 
-            // When & Then
-            mockMvc.post("/api/v1/auth/register") {
+            // When
+            val result = mockMvc.post("/api/v1/auth/register") {
                 contentType = APPLICATION_JSON
                 content = objectMapper.writeValueAsString(request)
                 accept = APPLICATION_PROBLEM_JSON
-            }.andExpect {
-                status { isUnprocessableContent() }
-                content { contentType(APPLICATION_PROBLEM_JSON) }
+            }
 
-                jsonPath("$.type") { value("https://api.example.com/problems/validation") }
-                jsonPath("$.status") { value(422) }
-                jsonPath("$.title") { value("Validation Failed") }
-                jsonPath("$.detail") { value("One or more fields failed validation.") }
-                jsonPath("$.instance") { value("http://localhost/api/v1/auth/register") }
+            // Then
+            assertUnprocessableEntity(result, "/api/v1/auth/register")
 
+            result.andExpect {
                 jsonPath("$.validationErrors") { isArray() }
-
                 jsonPath("$.validationErrors[?(@.field=='email')]") { exists() }
                 jsonPath("$.validationErrors[?(@.field=='username')]") { exists() }
                 jsonPath("$.validationErrors[?(@.field=='password')]") { exists() }
@@ -224,7 +241,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
                 accept = APPLICATION_PROBLEM_JSON
             }
 
-            assertConflict(result, "Email already in use", "http://localhost/api/v1/auth/register")
+            assertConflict(result, "Email already in use", "/api/v1/auth/register")
 
             verify(authService, times(1)).register(any())
         }
@@ -243,7 +260,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
                 accept = APPLICATION_PROBLEM_JSON
             }
 
-            assertConflict(result, "Username already in use", "http://localhost/api/v1/auth/register")
+            assertConflict(result, "Username already in use", "/api/v1/auth/register")
 
             verify(authService, times(1)).register(any())
         }
@@ -262,9 +279,196 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
                 accept = APPLICATION_PROBLEM_JSON
             }
 
-            assertInternalServerError(result, "http://localhost/api/v1/auth/register")
+            assertInternalServerError(result, "/api/v1/auth/register")
 
             verify(authService, times(1)).register(any())
+        }
+    }
+
+    @Nested
+    inner class Login {
+        @Test
+        fun `should return 200 OK when login with valid email`() {
+            // Given
+            val request = LoginRequestDto(
+                email = "john.doe@example.com",
+                password = "StrongP@ss1",
+            )
+
+            val mockUser = createMockUser(email = request.email!!)
+
+            val serviceResponse = LoginResponseDto(
+                authStatus = AuthStatus.VERIFIED,
+                accessToken = "a.mock.jwt.token",
+                expiresIn = 3600,
+                user = mockUser,
+            )
+
+            whenever(authService.login(any())).thenReturn(serviceResponse)
+
+            // When
+            val result = mockMvc.post("/api/v1/auth/login") {
+                contentType = APPLICATION_JSON
+                content = objectMapper.writeValueAsString(request)
+                accept = APPLICATION_JSON
+            }
+
+            // Then
+            result.andExpect {
+                status { isOk() }
+                content { contentTypeCompatibleWith(APPLICATION_JSON) }
+
+                jsonPath("$.data.authStatus") { value(serviceResponse.authStatus.value) }
+                jsonPath("$.data.accessToken") { value("a.mock.jwt.token") }
+                jsonPath("$.data.tokenType") { value("Bearer") }
+                jsonPath("$.data.expiresIn") { value(3600) }
+
+                // Verify the nested fields within the 'user' object
+                jsonPath("$.data.user.id") { value(serviceResponse.user.id.toString()) }
+                jsonPath("$.data.user.email") { value(serviceResponse.user.email) }
+                jsonPath("$.data.user.username") { value(serviceResponse.user.username) }
+                jsonPath("$.data.user.firstName") { value(serviceResponse.user.firstName) }
+                jsonPath("$.data.user.lastName") { value(serviceResponse.user.lastName) }
+                jsonPath("$.data.user.emailVerified") { value(serviceResponse.user.emailVerified) }
+                jsonPath("$.data.user.phoneVerified") { value(serviceResponse.user.phoneVerified) }
+                jsonPath("$.data.user.status") { value(serviceResponse.user.status.value) }
+                jsonPath("$.data.user.createdAt") { isNotEmpty() }
+                jsonPath("$.data.user.lastLoginAt") { isNotEmpty() }
+                jsonPath("$.data.user.roles") { value(hasItem(RoleType.CUSTOMER.value)) }
+            }
+
+            verify(authService, times(1)).login(
+                check { capturedDto ->
+                    assertEquals(request.email, capturedDto.email)
+                    assertNull(capturedDto.username)
+                },
+            )
+        }
+
+        @Test
+        fun `should return 200 OK when login with valid username`() {
+            // Given
+            val request = LoginRequestDto(
+                username = "john_doe_123",
+                password = "StrongP@ss1",
+            )
+
+            val mockUser = createMockUser(username = request.username!!)
+
+            val serviceResponse = LoginResponseDto(
+                authStatus = AuthStatus.VERIFIED,
+                accessToken = "a.mock.jwt.token",
+                expiresIn = 3600,
+                user = mockUser,
+            )
+
+            whenever(authService.login(any())).thenReturn(serviceResponse)
+
+            // When
+            val result = mockMvc.post("/api/v1/auth/login") {
+                contentType = APPLICATION_JSON
+                content = objectMapper.writeValueAsString(request)
+                accept = APPLICATION_JSON
+            }
+
+            // Then
+            result.andExpect {
+                status { isOk() }
+                content { contentTypeCompatibleWith(APPLICATION_JSON) }
+
+                jsonPath("$.data.authStatus") { value(serviceResponse.authStatus.value) }
+                jsonPath("$.data.accessToken") { value("a.mock.jwt.token") }
+                jsonPath("$.data.tokenType") { value("Bearer") }
+                jsonPath("$.data.expiresIn") { value(3600) }
+
+                // Verify the nested fields within the 'user' object
+                jsonPath("$.data.user.id") { value(serviceResponse.user.id.toString()) }
+                jsonPath("$.data.user.email") { value(serviceResponse.user.email) }
+                jsonPath("$.data.user.username") { value(serviceResponse.user.username) }
+                jsonPath("$.data.user.firstName") { value(serviceResponse.user.firstName) }
+                jsonPath("$.data.user.lastName") { value(serviceResponse.user.lastName) }
+                jsonPath("$.data.user.emailVerified") { value(serviceResponse.user.emailVerified) }
+                jsonPath("$.data.user.phoneVerified") { value(serviceResponse.user.phoneVerified) }
+                jsonPath("$.data.user.status") { value(serviceResponse.user.status.value) }
+                jsonPath("$.data.user.createdAt") { isNotEmpty() }
+                jsonPath("$.data.user.lastLoginAt") { isNotEmpty() }
+                jsonPath("$.data.user.roles") { value(hasItem(RoleType.CUSTOMER.value)) }
+            }
+
+            verify(authService, times(1)).login(
+                check { capturedDto ->
+                    assertEquals(request.username, capturedDto.username)
+                    assertNull(capturedDto.email)
+                },
+            )
+        }
+
+        @Test
+        fun `should return 401 Unauthorized when Bad credentials`() {
+            // Given
+            val request = LoginRequestDto(
+                email = "john.doe@example.com",
+                password = "wrong-password",
+            )
+
+            whenever(authService.login(any())).thenThrow(AuthenticationFailedException("Bad credentials"))
+
+            // When
+            val result = mockMvc.post("/api/v1/auth/login") {
+                contentType = APPLICATION_JSON
+                content = objectMapper.writeValueAsString(request)
+                accept = APPLICATION_PROBLEM_JSON
+            }
+
+            // Then
+            assertUnauthorized(result, "Bad credentials", "/api/v1/auth/login")
+
+            verify(authService, times(1)).login(any())
+        }
+
+        @Test
+        fun `should return 400 Bad Request for malformed JSON`() {
+            // Given
+            val request = " { invalid"
+
+            // When
+            val result = mockMvc.post("/api/v1/auth/login") {
+                contentType = APPLICATION_JSON
+                content = request
+                accept = APPLICATION_PROBLEM_JSON
+            }
+
+            // Then
+            assertBadRequest(result, "/api/v1/auth/login")
+
+            verify(authService, never()).login(any())
+        }
+
+        @Test
+        fun `should return 422 Unprocessable Entity for all validation failures`() { // Validation failed
+            // Given
+            val request = LoginRequestDto(
+                email = "invalid",
+                password = "",
+            )
+
+            // When
+            val result = mockMvc.post("/api/v1/auth/login") {
+                contentType = APPLICATION_JSON
+                content = objectMapper.writeValueAsString(request)
+                accept = APPLICATION_PROBLEM_JSON
+            }
+
+            // Then
+            assertUnprocessableEntity(result, "/api/v1/auth/login")
+
+            result.andExpect {
+                jsonPath("$.validationErrors") { isArray() }
+                jsonPath("$.validationErrors[?(@.field=='email')]") { exists() }
+                jsonPath("$.validationErrors[?(@.field=='password')]") { exists() }
+            }
+
+            verify(authService, never()).login(any())
         }
     }
 }
