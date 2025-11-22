@@ -29,7 +29,7 @@ open class AbstractControllerTest {
         expectedInstance: String? = null,
     ) {
         result.andExpect {
-            status { expectedStatus }
+            status { isEqualTo(expectedStatus) }
             content { contentType(APPLICATION_PROBLEM_JSON) }
             jsonPath("$.type") { value(expectedType) }
             jsonPath("$.status") { value(expectedStatus) }
@@ -73,6 +73,7 @@ open class AbstractControllerTest {
             jsonPath("$.cause") { exists() }
         }
     }
+
     fun assertConflict(result: ResultActionsDsl, detail: String, instance: String? = null) {
         assertProblem(
             result = result,
