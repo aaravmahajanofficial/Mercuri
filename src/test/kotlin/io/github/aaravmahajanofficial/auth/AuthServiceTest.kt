@@ -24,6 +24,7 @@ import io.github.aaravmahajanofficial.users.RoleType
 import io.github.aaravmahajanofficial.users.User
 import io.github.aaravmahajanofficial.users.UserRepository
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.assertThrows
@@ -93,96 +94,99 @@ class AuthServiceTest {
         )
     }
 
-    @Test
-    fun `should register user successfully`() {
-        // Given
-        whenever(userRepository.findByEmail(requestDto.email)).thenReturn(null)
-        whenever(userRepository.findByUsername(requestDto.username)).thenReturn(null)
-        whenever(roleRepository.findByName(RoleType.CUSTOMER)).thenReturn(customerRole)
+    @Nested
+    inner class Registration {
+        @Test
+        fun `should register user successfully`() {
+            // Given
+            whenever(userRepository.findByEmail(requestDto.email)).thenReturn(null)
+            whenever(userRepository.findByUsername(requestDto.username)).thenReturn(null)
+            whenever(roleRepository.findByName(RoleType.CUSTOMER)).thenReturn(customerRole)
 
-        val hashedPassword = "hashed_password"
-        whenever(passwordEncoder.encode(requestDto.password)).thenReturn(hashedPassword)
+            val hashedPassword = "hashed_password"
+            whenever(passwordEncoder.encode(requestDto.password)).thenReturn(hashedPassword)
 
-        whenever(userRepository.save(any<User>())).thenAnswer { invocation ->
-            val user = invocation.arguments[0] as User
-            user.id = user.id ?: UUID.randomUUID()
-            user.createdAt = user.createdAt ?: Instant.now()
-            user.updatedAt = user.updatedAt ?: Instant.now()
-            user
+            whenever(userRepository.save(any<User>())).thenAnswer { invocation ->
+                val user = invocation.arguments[0] as User
+                user.id = user.id ?: UUID.randomUUID()
+                user.createdAt = user.createdAt ?: Instant.now()
+                user.updatedAt = user.updatedAt ?: Instant.now()
+                user
+            }
+
+            // When
+            val result = authService.register(requestDto)
+
+            // Then
+            assertNotNull(result)
+            assertEquals(requestDto.email, result.email)
+            assertEquals(requestDto.username, result.username)
+            assertEquals(listOf(RoleType.CUSTOMER), result.roles)
+
+            // verify the saved object
+            verify(userRepository).save(userCaptor.capture())
+            val savedUser = userCaptor.value
+
+            assertEquals(requestDto.email, savedUser.email)
+            assertEquals(requestDto.username, savedUser.username)
+            assertEquals(hashedPassword, savedUser.passwordHash)
+            assertEquals(requestDto.firstName, savedUser.firstName)
+            assertEquals(requestDto.lastName, savedUser.lastName)
+            assertEquals(requestDto.phoneNumber, savedUser.phoneNumber)
+            assertEquals(false, savedUser.emailVerified)
+            assertEquals(false, savedUser.phoneVerified)
+            assertNotNull(savedUser.createdAt)
+            assertNotNull(savedUser.updatedAt)
+            assertEquals(setOf(customerRole), savedUser.roles)
+
+            verify(eventPublisher).publishEvent(any())
         }
 
-        // When
-        val result = authService.register(requestDto)
+        @Test
+        fun `should throw UserAlreadyExistsException when email is taken`() {
+            // Given
+            whenever(userRepository.findByEmail(requestDto.email)).thenReturn(customer)
 
-        // Then
-        assertNotNull(result)
-        assertEquals(requestDto.email, result.email)
-        assertEquals(requestDto.username, result.username)
-        assertEquals(listOf(RoleType.CUSTOMER), result.roles)
+            // When & Then
+            val exception = assertThrows<UserAlreadyExistsException> {
+                authService.register(requestDto)
+            }
 
-        // verify the saved object
-        verify(userRepository).save(userCaptor.capture())
-        val savedUser = userCaptor.value
-
-        assertEquals(requestDto.email, savedUser.email)
-        assertEquals(requestDto.username, savedUser.username)
-        assertEquals(hashedPassword, savedUser.passwordHash)
-        assertEquals(requestDto.firstName, savedUser.firstName)
-        assertEquals(requestDto.lastName, savedUser.lastName)
-        assertEquals(requestDto.phoneNumber, savedUser.phoneNumber)
-        assertEquals(false, savedUser.emailVerified)
-        assertEquals(false, savedUser.phoneVerified)
-        assertNotNull(savedUser.createdAt)
-        assertNotNull(savedUser.updatedAt)
-        assertEquals(setOf(customerRole), savedUser.roles)
-
-        verify(eventPublisher).publishEvent(any())
-    }
-
-    @Test
-    fun `should throw UserAlreadyExistsException when email is taken`() {
-        // Given
-        whenever(userRepository.findByEmail(requestDto.email)).thenReturn(customer)
-
-        // When & Then
-        val exception = assertThrows<UserAlreadyExistsException> {
-            authService.register(requestDto)
+            assertNotNull(exception.message)
+            verify(userRepository, never()).save(any())
+            verify(eventPublisher, never()).publishEvent(any())
         }
 
-        assertNotNull(exception.message)
-        verify(userRepository, never()).save(any())
-        verify(eventPublisher, never()).publishEvent(any())
-    }
+        @Test
+        fun `should throw UserAlreadyExistsException when username is taken`() {
+            // Given
+            whenever(userRepository.findByUsername(requestDto.username)).thenReturn(customer)
 
-    @Test
-    fun `should throw UserAlreadyExistsException when username is taken`() {
-        // Given
-        whenever(userRepository.findByUsername(requestDto.username)).thenReturn(customer)
+            // When & Then
+            val exception = assertThrows<UserAlreadyExistsException> {
+                authService.register(requestDto)
+            }
 
-        // When & Then
-        val exception = assertThrows<UserAlreadyExistsException> {
-            authService.register(requestDto)
+            assertNotNull(exception.message)
+            verify(userRepository, never()).save(any())
+            verify(eventPublisher, never()).publishEvent(any())
         }
 
-        assertNotNull(exception.message)
-        verify(userRepository, never()).save(any())
-        verify(eventPublisher, never()).publishEvent(any())
-    }
+        @Test
+        fun `should throw DefaultRoleNotFoundException when 'Customer' role is missing`() {
+            // Given
+            whenever(userRepository.findByEmail(requestDto.email)).thenReturn(null)
+            whenever(userRepository.findByUsername(requestDto.username)).thenReturn(null)
+            whenever(roleRepository.findByName(RoleType.CUSTOMER)).thenReturn(null)
 
-    @Test
-    fun `should throw DefaultRoleNotFoundException when 'Customer' role is missing`() {
-        // Given
-        whenever(userRepository.findByEmail(requestDto.email)).thenReturn(null)
-        whenever(userRepository.findByUsername(requestDto.username)).thenReturn(null)
-        whenever(roleRepository.findByName(RoleType.CUSTOMER)).thenReturn(null)
+            // When & Then
+            val exception = assertThrows<DefaultRoleNotFoundException> {
+                authService.register(requestDto)
+            }
 
-        // When & Then
-        val exception = assertThrows<DefaultRoleNotFoundException> {
-            authService.register(requestDto)
+            assertNotNull(exception.message)
+            verify(userRepository, never()).save(any())
+            verify(eventPublisher, never()).publishEvent(any())
         }
-
-        assertNotNull(exception.message)
-        verify(userRepository, never()).save(any())
-        verify(eventPublisher, never()).publishEvent(any())
     }
 }
