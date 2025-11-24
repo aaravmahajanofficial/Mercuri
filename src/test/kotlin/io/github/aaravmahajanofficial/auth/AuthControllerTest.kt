@@ -59,15 +59,11 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
     lateinit var authService: AuthService
 
     companion object {
-        fun createValidRegisterRequest(email: String = "john.doe@example.com", username: String = "john_doe_123") =
-            RegisterRequestDto(email, username, "SecureP@ss123", "John", "Doe", "+1234567890")
+        fun createValidRegisterRequest(email: String = "john.doe@example.com") =
+            RegisterRequestDto(email, "SecureP@ss123", "John", "Doe", "+1234567890")
 
-        fun createMockUser(
-            id: UUID = UUID.randomUUID(),
-            email: String = "john.doe@example.com",
-            username: String = "john_doe_123",
-        ) = UserDto(
-            id, email, username, "John", "Doe", "+1234567890", true, true, UserStatus.ACTIVE, Instant.now(),
+        fun createMockUser(id: UUID = UUID.randomUUID(), email: String = "john.doe@example.com") = UserDto(
+            id, email, "John", "Doe", "+1234567890", true, true, UserStatus.ACTIVE, Instant.now(),
             Instant.now(), listOf(RoleType.CUSTOMER),
         )
     }
@@ -84,7 +80,6 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
             val serviceResponse = RegisterResponseDto(
                 id = UUID.randomUUID(),
                 email = request.email,
-                username = request.username,
                 phoneNumber = request.phoneNumber,
                 status = UserStatus.ACTIVE,
                 emailVerified = false,
@@ -105,19 +100,19 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
 
                 jsonPath("$.data.id") { value(serviceResponse.id.toString()) }
                 jsonPath("$.data.email") { value(serviceResponse.email) }
-                jsonPath("$.data.username") { value(serviceResponse.username) }
                 jsonPath("$.data.phoneNumber") { value(serviceResponse.phoneNumber) }
                 jsonPath("$.data.status") { value(serviceResponse.status.value) }
                 jsonPath("$.data.emailVerified") { value(serviceResponse.emailVerified) }
                 jsonPath("$.data.roles") { value(hasItem(RoleType.CUSTOMER.value)) }
                 jsonPath("$.data.createdAt") { exists() }
+
+                jsonPath("$.meta.timestamp") { exists() }
             }
 
             // to verify if the input sent to the service method is correct
             verify(authService).register(
                 check { capturedDto ->
                     assertEquals(request.email, capturedDto.email)
-                    assertEquals(request.username, capturedDto.username)
                     assertEquals(request.password, capturedDto.password)
                     assertEquals(request.firstName, capturedDto.firstName)
                     assertEquals(request.lastName, capturedDto.lastName)
@@ -187,7 +182,6 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
             // Given
             val request = RegisterRequestDto(
                 email = "",
-                username = "",
                 password = "bad",
                 firstName = "",
                 lastName = "",
@@ -207,7 +201,6 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
             result.andExpect {
                 jsonPath("$.validationErrors") { isArray() }
                 jsonPath("$.validationErrors[?(@.field=='email')]") { exists() }
-                jsonPath("$.validationErrors[?(@.field=='username')]") { exists() }
                 jsonPath("$.validationErrors[?(@.field=='password')]") { exists() }
                 jsonPath("$.validationErrors[?(@.field=='firstName')]") { exists() }
                 jsonPath("$.validationErrors[?(@.field=='lastName')]") { exists() }
@@ -309,7 +302,6 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
                 // Verify the nested fields within the 'user' object
                 jsonPath("$.data.user.id") { value(serviceResponse.user.id.toString()) }
                 jsonPath("$.data.user.email") { value(serviceResponse.user.email) }
-                jsonPath("$.data.user.username") { value(serviceResponse.user.username) }
                 jsonPath("$.data.user.firstName") { value(serviceResponse.user.firstName) }
                 jsonPath("$.data.user.lastName") { value(serviceResponse.user.lastName) }
                 jsonPath("$.data.user.emailVerified") { value(serviceResponse.user.emailVerified) }

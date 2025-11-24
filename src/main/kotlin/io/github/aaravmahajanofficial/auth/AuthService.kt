@@ -65,5 +65,6 @@ class AuthService(
         return savedUser.toRegisterResponse()
     }
 
+    @Transactional
     fun login(requestBody: LoginRequestDto): LoginResponseDto = TODO()
 }

@@ -45,7 +45,6 @@ class AuthRepositoryTest @Autowired constructor(
     fun setUp() {
         testUser = User(
             email = "john.doe@example.com",
-            username = "john_doe",
             passwordHash = "hashed_password",
             firstName = "John",
             lastName = "Doe",

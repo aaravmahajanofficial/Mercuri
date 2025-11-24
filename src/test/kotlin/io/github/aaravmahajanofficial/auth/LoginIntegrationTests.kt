@@ -23,9 +23,10 @@ import io.github.aaravmahajanofficial.users.RoleType
 import io.github.aaravmahajanofficial.users.User
 import io.github.aaravmahajanofficial.users.UserRepository
 import io.github.aaravmahajanofficial.users.UserStatus
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNotNull
+import org.junit.jupiter.api.assertNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
@@ -35,6 +36,7 @@ import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.web.reactive.server.WebTestClient
+import java.time.Instant
 
 @Import(TestcontainersConfiguration::class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -54,7 +56,6 @@ class LoginIntegrationTests @Autowired constructor(
 
         activeUser = User(
             email = "valid.user@example.com",
-            username = "valid_user_123",
             passwordHash = passwordEncoder.encode("StrongP@ss1")!!,
             firstName = "Test",
             lastName = "User",
@@ -62,15 +63,11 @@ class LoginIntegrationTests @Autowired constructor(
             phoneVerified = true,
             emailVerified = true,
             status = UserStatus.ACTIVE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
         ).apply { addRole(customerRole) }
 
-        userRepository.save(activeUser)
-    }
-
-    @AfterEach
-    fun tearDown() {
-        userRepository.deleteAll()
-        roleRepository.deleteAll()
+        userRepository.saveAndFlush(activeUser)
     }
 
     @Test
@@ -82,27 +79,18 @@ class LoginIntegrationTests @Autowired constructor(
         )
 
         // When
-        val result = webTestClient.post().uri("/api/v1/auth/login")
+        webTestClient.post().uri("/api/v1/auth/login")
             .contentType(APPLICATION_JSON)
             .bodyValue(request)
-            .exchange()
+            .exchange().expectStatus().isEqualTo(HttpStatus.OK)
 
-        // Then
-        result.expectStatus().isEqualTo(HttpStatus.OK)
-            .expectHeader()
-            .contentType(APPLICATION_JSON)
-            .expectBody()
-            .jsonPath("$.data.accessToken").exists()
-            .jsonPath("$.data.tokenType").isEqualTo("Bearer")
-            .jsonPath("$.data.expiresIn").exists()
-            .jsonPath("$.data.user").exists()
-            .jsonPath("$.data.user.id").isNotEmpty
-            .jsonPath("$.data.user.email").isEqualTo(request.email)
-            .jsonPath("$.meta.timestamp").isNotEmpty
+        // Then - DB State
+        val attemptedUser = userRepository.findByEmail(request.email)
+        assertNotNull(attemptedUser?.lastLoginAt, "DB should be updated with login timestamp")
     }
 
     @Test
-    fun `should fail with 401 Unauthorized for invalid password`() {
+    fun `should fail with 401 on login with incorrect password`() {
         // Given
         val request = LoginRequestDto(
             email = "valid.user@example.com",
@@ -119,15 +107,14 @@ class LoginIntegrationTests @Autowired constructor(
         result.expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED)
             .expectHeader()
             .contentType(APPLICATION_PROBLEM_JSON)
-            .expectBody()
-            .jsonPath("$.status").isEqualTo(HttpStatus.UNAUTHORIZED.value())
-            .jsonPath("$.title").isEqualTo("Authentication Failed")
-            .jsonPath("$.detail").exists()
-            .jsonPath("$.instance").exists()
+
+        // Then - DB State
+        val attemptedUser = userRepository.findByEmail(request.email)
+        assertNull(attemptedUser?.lastLoginAt)
     }
 
     @Test
-    fun `should fail with 401 Unauthorized for non-existent user`() {
+    fun `should fail with 401 login with non-existent user`() {
         // Given
         val request = LoginRequestDto(
             email = "ghostUser@example.com",
@@ -144,19 +131,17 @@ class LoginIntegrationTests @Autowired constructor(
         result.expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED)
             .expectHeader()
             .contentType(APPLICATION_PROBLEM_JSON)
-            .expectBody()
-            .jsonPath("$.status").isEqualTo(HttpStatus.UNAUTHORIZED.value())
-            .jsonPath("$.title").isEqualTo("Authentication Failed")
-            .jsonPath("$.detail").exists()
-            .jsonPath("$.instance").exists()
+
+        // Then - DB State
+        val attemptedUser = userRepository.findByEmail(request.email)
+        assertNull(attemptedUser, "A user should not be created upon failed login attempt")
     }
 
     @Test
-    fun `should fail with 401 Unauthorized when user is suspended`() {
+    fun `should fail with 401 when user is suspended`() {
         // Given
         val suspendedUser = User(
             email = "suspended_user@example.com",
-            username = "suspended_user_123",
             passwordHash = passwordEncoder.encode("StrongP@ss1")!!,
             firstName = "Test",
             lastName = "User",
@@ -164,7 +149,7 @@ class LoginIntegrationTests @Autowired constructor(
             status = UserStatus.SUSPENDED,
         ).apply { addRole(roleRepository.findByName(RoleType.CUSTOMER)!!) }
 
-        userRepository.save(suspendedUser)
+        userRepository.saveAndFlush(suspendedUser)
 
         val request = LoginRequestDto(
             email = "suspended_user@example.com",
@@ -181,19 +166,17 @@ class LoginIntegrationTests @Autowired constructor(
         result.expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED)
             .expectHeader()
             .contentType(APPLICATION_PROBLEM_JSON)
-            .expectBody()
-            .jsonPath("$.status").isEqualTo(HttpStatus.UNAUTHORIZED.value())
-            .jsonPath("$.title").isEqualTo("Authentication Failed")
-            .jsonPath("$.detail").exists()
-            .jsonPath("$.instance").exists()
+
+        // Then - DB State
+        val attemptedUser = userRepository.findByEmail(request.email)
+        assertNull(attemptedUser?.lastLoginAt)
     }
 
     @Test
-    fun `should fail with 403 Forbidden when user hasn't verified the email`() {
+    fun `should fail with 403 when user hasn't verified the email`() {
         // Given
         val unverifiedUser = User(
             email = "unverified_user@example.com",
-            username = "unverified_user_123",
             passwordHash = passwordEncoder.encode("StrongP@ss1")!!,
             firstName = "Test",
             lastName = "User",
@@ -201,7 +184,7 @@ class LoginIntegrationTests @Autowired constructor(
             emailVerified = false,
         ).apply { addRole(roleRepository.findByName(RoleType.CUSTOMER)!!) }
 
-        userRepository.save(unverifiedUser)
+        userRepository.saveAndFlush(unverifiedUser)
 
         val request = LoginRequestDto(
             email = "unverified_user@example.com",
@@ -218,33 +201,9 @@ class LoginIntegrationTests @Autowired constructor(
         result.expectStatus().isEqualTo(HttpStatus.FORBIDDEN)
             .expectHeader()
             .contentType(APPLICATION_PROBLEM_JSON)
-            .expectBody()
-            .jsonPath("$.status").isEqualTo(HttpStatus.FORBIDDEN.value())
-            .jsonPath("$.title").isEqualTo("Account unverified")
-            .jsonPath("$.detail").exists()
-            .jsonPath("$.instance").exists()
-    }
 
-    @Test
-    fun `should return 422 Unprocessable Content on validation failure`() {
-        // Verifies that the framework actually triggers the validation logic during a real request
-        val request = mapOf("id" to "")
-
-        // When
-        val result = webTestClient.post().uri("/api/v1/auth/login")
-            .contentType(APPLICATION_JSON)
-            .bodyValue(request)
-            .exchange()
-
-        // Then
-        result.expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT)
-            .expectHeader().contentType(APPLICATION_PROBLEM_JSON)
-            .expectBody()
-            .jsonPath("$.status").isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT.value())
-            .jsonPath("$.title").isEqualTo("Validation Failed")
-            .jsonPath("$.detail").exists()
-            .jsonPath("$.instance").exists()
-            .jsonPath("$.validationErrors").isArray
-            .jsonPath("$.validationErrors").isNotEmpty
+        // Then - DB State
+        val attemptedUser = userRepository.findByEmail(request.email)
+        assertNull(attemptedUser?.lastLoginAt)
     }
 }

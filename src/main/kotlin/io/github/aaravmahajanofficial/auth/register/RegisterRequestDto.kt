@@ -26,11 +26,6 @@ data class RegisterRequestDto(
     @Size(max = 255)
     val email: String,
 
-    @NotBlank(message = "Username is required")
-    @Size(min = 3, max = 32)
-    @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "Username can only contain letters, numbers, and underscores")
-    val username: String,
-
     @NotBlank(message = "Password is required")
     @Size(min = 8, max = 128)
     @Pattern(

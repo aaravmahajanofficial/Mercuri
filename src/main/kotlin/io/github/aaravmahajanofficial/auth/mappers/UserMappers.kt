@@ -21,7 +21,6 @@ import io.github.aaravmahajanofficial.users.User
 fun User.toRegisterResponse(): RegisterResponseDto = RegisterResponseDto(
     id = id!!,
     email = email,
-    username = username,
     phoneNumber = phoneNumber,
     status = status,
     emailVerified = emailVerified,

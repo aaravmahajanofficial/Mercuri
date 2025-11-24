@@ -23,7 +23,6 @@ import java.util.UUID
 data class RegisterResponseDto(
     val id: UUID,
     val email: String,
-    val username: String,
     val phoneNumber: String,
     val status: UserStatus,
     val emailVerified: Boolean,

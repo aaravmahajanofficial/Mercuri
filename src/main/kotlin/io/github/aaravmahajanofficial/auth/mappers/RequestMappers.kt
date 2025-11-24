@@ -20,7 +20,6 @@ import io.github.aaravmahajanofficial.users.User
 
 fun RegisterRequestDto.toUser(encodedPassword: String): User = User(
     email = email,
-    username = username,
     passwordHash = encodedPassword,
     firstName = firstName,
     lastName = lastName,
