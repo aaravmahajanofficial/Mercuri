@@ -13,16 +13,18 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.auth.login
+package io.github.aaravmahajanofficial.auth.mappers
 
-import jakarta.validation.constraints.Email
-import jakarta.validation.constraints.NotBlank
+import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
+import io.github.aaravmahajanofficial.users.User
 
-data class LoginRequestDto(
-    @NotBlank(message = "Email is required")
-    @Email(message = "Invalid email format")
-    val email: String,
-
-    @NotBlank(message = "Password is required")
-    val password: String,
+fun User.toRegisterResponse(): RegisterResponseDto = RegisterResponseDto(
+    id = id!!,
+    email = email,
+    username = username,
+    phoneNumber = phoneNumber,
+    status = status,
+    emailVerified = emailVerified,
+    createdAt = createdAt!!,
+    roles = this.roles.map { it.name },
 )

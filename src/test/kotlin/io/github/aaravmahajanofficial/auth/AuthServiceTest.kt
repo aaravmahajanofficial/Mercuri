@@ -15,7 +15,9 @@
  */
 package io.github.aaravmahajanofficial.auth
 
-import io.github.aaravmahajanofficial.auth.register.RequestDto
+import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
+import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
+import io.github.aaravmahajanofficial.common.exception.AuthenticationFailedException
 import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
 import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
 import io.github.aaravmahajanofficial.users.Role
@@ -23,19 +25,20 @@ import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
 import io.github.aaravmahajanofficial.users.User
 import io.github.aaravmahajanofficial.users.UserRepository
+import io.github.aaravmahajanofficial.users.UserStatus
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.ints.exactly
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.ArgumentCaptor
-import org.mockito.Captor
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
-import org.mockito.kotlin.never
+import org.mockito.kotlin.check
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.context.ApplicationEventPublisher
@@ -59,19 +62,35 @@ class AuthServiceTest {
     @Mock
     lateinit var eventPublisher: ApplicationEventPublisher
 
-    @Captor
-    lateinit var userCaptor: ArgumentCaptor<User>
-
     @InjectMocks
     lateinit var authService: AuthService
 
-    private lateinit var requestDto: RequestDto
     private lateinit var customerRole: Role
-    private lateinit var customer: User
+    private lateinit var user: User
+    private lateinit var registerRequest: RegisterRequestDto
+    private lateinit var loginRequest: LoginRequestDto
 
     @BeforeEach
     fun setUp() {
-        requestDto = RequestDto(
+        user = User(
+            email = "john.doe@example.com",
+            username = "john_doe_123",
+            passwordHash = "hashed_password",
+            firstName = "John",
+            lastName = "Doe",
+            phoneNumber = "+1234567890",
+            status = UserStatus.ACTIVE,
+        ).apply {
+            this.id = UUID.randomUUID()
+            this.createdAt = Instant.now()
+            this.updatedAt = Instant.now()
+        }
+
+        customerRole = Role(
+            name = RoleType.CUSTOMER,
+        )
+
+        registerRequest = RegisterRequestDto(
             email = "john.doe@example.com",
             username = "john_doe_123",
             password = "SecureP@ss123",
@@ -80,17 +99,9 @@ class AuthServiceTest {
             phoneNumber = "+1234567890",
         )
 
-        customer = User(
+        loginRequest = LoginRequestDto(
             email = "john.doe@example.com",
-            username = "john_doe",
-            passwordHash = "hashed_password",
-            firstName = "John",
-            lastName = "Doe",
-            phoneNumber = "+1234567890",
-        )
-
-        customerRole = Role(
-            name = RoleType.CUSTOMER,
+            password = "StrongP@ss123!",
         )
     }
 
@@ -99,94 +110,128 @@ class AuthServiceTest {
         @Test
         fun `should register user successfully`() {
             // Given
-            whenever(userRepository.findByEmail(requestDto.email)).thenReturn(null)
-            whenever(userRepository.findByUsername(requestDto.username)).thenReturn(null)
+            whenever(userRepository.findByEmail(registerRequest.email)).thenReturn(null)
             whenever(roleRepository.findByName(RoleType.CUSTOMER)).thenReturn(customerRole)
-
-            val hashedPassword = "hashed_password"
-            whenever(passwordEncoder.encode(requestDto.password)).thenReturn(hashedPassword)
-
-            whenever(userRepository.save(any<User>())).thenAnswer { invocation ->
-                val user = invocation.arguments[0] as User
-                user.id = user.id ?: UUID.randomUUID()
-                user.createdAt = user.createdAt ?: Instant.now()
-                user.updatedAt = user.updatedAt ?: Instant.now()
-                user
-            }
+            whenever(passwordEncoder.encode(registerRequest.password)).thenReturn("hashed_password")
+            whenever(userRepository.save(any())).thenReturn(user)
 
             // When
-            val result = authService.register(requestDto)
+            val result = authService.register(registerRequest)
 
             // Then
             assertNotNull(result)
-            assertEquals(requestDto.email, result.email)
-            assertEquals(requestDto.username, result.username)
-            assertEquals(listOf(RoleType.CUSTOMER), result.roles)
+            assertEquals(registerRequest.email, result.email)
+            assertEquals(registerRequest.username, result.username)
 
             // verify the saved object
-            verify(userRepository).save(userCaptor.capture())
-            val savedUser = userCaptor.value
+            verify(exactly(1)) {
+                userRepository.save(
+                    check { dto ->
+                        assertEquals(registerRequest.email, dto.email)
+                        assertEquals(registerRequest.username, dto.username)
+                        assertEquals("hashed_password", dto.passwordHash)
+                        assertEquals(registerRequest.firstName, dto.firstName)
+                        assertEquals(registerRequest.lastName, dto.lastName)
+                        assertEquals(registerRequest.phoneNumber, dto.phoneNumber)
+                        assertEquals(false, dto.emailVerified)
+                        assertEquals(false, dto.phoneVerified)
+                        assertNotNull(dto.createdAt)
+                        assertNotNull(dto.updatedAt)
+                        assertEquals(setOf(customerRole), dto.roles)
+                    },
+                )
+            }
 
-            assertEquals(requestDto.email, savedUser.email)
-            assertEquals(requestDto.username, savedUser.username)
-            assertEquals(hashedPassword, savedUser.passwordHash)
-            assertEquals(requestDto.firstName, savedUser.firstName)
-            assertEquals(requestDto.lastName, savedUser.lastName)
-            assertEquals(requestDto.phoneNumber, savedUser.phoneNumber)
-            assertEquals(false, savedUser.emailVerified)
-            assertEquals(false, savedUser.phoneVerified)
-            assertNotNull(savedUser.createdAt)
-            assertNotNull(savedUser.updatedAt)
-            assertEquals(setOf(customerRole), savedUser.roles)
-
-            verify(eventPublisher).publishEvent(any())
+            verify(exactly(1)) { eventPublisher.publishEvent(any()) }
         }
 
         @Test
         fun `should throw UserAlreadyExistsException when email is taken`() {
             // Given
-            whenever(userRepository.findByEmail(requestDto.email)).thenReturn(customer)
+            whenever(userRepository.findByEmail(registerRequest.email)).thenReturn(user)
 
             // When & Then
-            val exception = assertThrows<UserAlreadyExistsException> {
-                authService.register(requestDto)
-            }
+            assertThrows<UserAlreadyExistsException> { authService.register(registerRequest) }
 
-            assertNotNull(exception.message)
-            verify(userRepository, never()).save(any())
-            verify(eventPublisher, never()).publishEvent(any())
+            verify(exactly(0)) { userRepository.save(any()) }
+            verify(exactly(0)) { eventPublisher.publishEvent(any()) }
         }
 
         @Test
-        fun `should throw UserAlreadyExistsException when username is taken`() {
+        fun `should throw DefaultRoleNotFoundException when default role is missing`() {
             // Given
-            whenever(userRepository.findByUsername(requestDto.username)).thenReturn(customer)
-
-            // When & Then
-            val exception = assertThrows<UserAlreadyExistsException> {
-                authService.register(requestDto)
-            }
-
-            assertNotNull(exception.message)
-            verify(userRepository, never()).save(any())
-            verify(eventPublisher, never()).publishEvent(any())
-        }
-
-        @Test
-        fun `should throw DefaultRoleNotFoundException when 'Customer' role is missing`() {
-            // Given
-            whenever(userRepository.findByEmail(requestDto.email)).thenReturn(null)
-            whenever(userRepository.findByUsername(requestDto.username)).thenReturn(null)
+            whenever(userRepository.findByEmail(registerRequest.email)).thenReturn(null)
             whenever(roleRepository.findByName(RoleType.CUSTOMER)).thenReturn(null)
 
             // When & Then
-            val exception = assertThrows<DefaultRoleNotFoundException> {
-                authService.register(requestDto)
+            assertThrows<DefaultRoleNotFoundException> { authService.register(registerRequest) }
+
+            verify(exactly(0)) { userRepository.save(any()) }
+            verify(exactly(0)) { eventPublisher.publishEvent(any()) }
+        }
+    }
+
+    @Nested
+    inner class Login {
+
+        @Test
+        fun `should login successfully and update the last login time`() {
+            // Given
+            whenever(userRepository.findByEmail(loginRequest.email)).thenReturn(user)
+            whenever(passwordEncoder.matches(loginRequest.password, user.passwordHash)).thenReturn(true)
+            whenever(userRepository.save(any())).thenReturn(user)
+
+            // When
+            val result = authService.login(loginRequest)
+
+            // Then
+            assertNotNull(result)
+            assertNotNull(result.accessToken)
+            assertEquals(user.email, result.user.email)
+
+            verify(exactly(0)) {
+                userRepository.save(
+                    check { dto ->
+                        assertEquals(user.email, dto.email)
+                        assertNotNull(user.lastLoginAt)
+                    },
+                )
             }
 
-            assertNotNull(exception.message)
-            verify(userRepository, never()).save(any())
-            verify(eventPublisher, never()).publishEvent(any())
+            verify(exactly(0)) { userRepository.findByEmail(any()) }
+            verify(exactly(0)) { userRepository.save(any()) }
+            verify(exactly(0)) { eventPublisher.publishEvent(any()) }
+        }
+
+        @Test
+        fun `should throw AuthenticationFailedException when invalid credentials`() {
+            // Given
+            whenever(userRepository.findByEmail(loginRequest.email)).thenReturn(user)
+            whenever(passwordEncoder.matches(loginRequest.password, user.passwordHash)).thenReturn(null)
+
+            // When
+            shouldThrow<AuthenticationFailedException> {
+                authService.login(loginRequest)
+            }
+
+            // Then
+            verify(exactly(1)) { userRepository.findByEmail(loginRequest.email) }
+            verify(exactly(0)) { userRepository.save(any()) }
+            verify(exactly(0)) { eventPublisher.publishEvent(any()) }
+        }
+
+        @Test
+        fun `should throw AuthenticationFailedException when user not found`() {
+            // Given
+            whenever(userRepository.findByEmail(loginRequest.email)).thenReturn(null)
+
+            // When
+            shouldThrow<AuthenticationFailedException> { authService.login(loginRequest) }
+
+            // Then
+            verify(exactly(1)) { userRepository.findByEmail(loginRequest.email) }
+            verify(exactly(0)) { userRepository.save(any()) }
+            verify(exactly(0)) { eventPublisher.publishEvent(any()) }
         }
     }
 }

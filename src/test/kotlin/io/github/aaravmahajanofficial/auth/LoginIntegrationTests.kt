@@ -30,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -87,35 +88,7 @@ class LoginIntegrationTests @Autowired constructor(
             .exchange()
 
         // Then
-        result.expectStatus().isOk
-            .expectHeader()
-            .contentType(APPLICATION_JSON)
-            .expectBody()
-            .jsonPath("$.data.accessToken").exists()
-            .jsonPath("$.data.tokenType").isEqualTo("Bearer")
-            .jsonPath("$.data.expiresIn").exists()
-            .jsonPath("$.data.user").exists()
-            .jsonPath("$.data.user.id").isNotEmpty
-            .jsonPath("$.data.user.email").isEqualTo(request.email)
-            .jsonPath("$.meta.timestamp").isNotEmpty
-    }
-
-    @Test
-    fun `should return 200 OK when login successful with valid username`() { // test database has a UNIQUE constraint
-        // Given
-        val request = LoginRequestDto(
-            username = "valid_user_123",
-            password = "StrongP@ss1",
-        )
-
-        // When
-        val result = webTestClient.post().uri("/api/v1/auth/login")
-            .contentType(APPLICATION_JSON)
-            .bodyValue(request)
-            .exchange()
-
-        // Then
-        result.expectStatus().isOk
+        result.expectStatus().isEqualTo(HttpStatus.OK)
             .expectHeader()
             .contentType(APPLICATION_JSON)
             .expectBody()
@@ -132,7 +105,7 @@ class LoginIntegrationTests @Autowired constructor(
     fun `should fail with 401 Unauthorized for invalid password`() {
         // Given
         val request = LoginRequestDto(
-            username = "valid_user_123",
+            email = "valid.user@example.com",
             password = "wrong-password",
         )
 
@@ -143,11 +116,11 @@ class LoginIntegrationTests @Autowired constructor(
             .exchange()
 
         // Then
-        result.expectStatus().isUnauthorized
+        result.expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED)
             .expectHeader()
             .contentType(APPLICATION_PROBLEM_JSON)
             .expectBody()
-            .jsonPath("$.status").isEqualTo(401)
+            .jsonPath("$.status").isEqualTo(HttpStatus.UNAUTHORIZED.value())
             .jsonPath("$.title").isEqualTo("Authentication Failed")
             .jsonPath("$.detail").exists()
             .jsonPath("$.instance").exists()
@@ -168,11 +141,11 @@ class LoginIntegrationTests @Autowired constructor(
             .exchange()
 
         // Then
-        result.expectStatus().isUnauthorized
+        result.expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED)
             .expectHeader()
             .contentType(APPLICATION_PROBLEM_JSON)
             .expectBody()
-            .jsonPath("$.status").isEqualTo(401)
+            .jsonPath("$.status").isEqualTo(HttpStatus.UNAUTHORIZED.value())
             .jsonPath("$.title").isEqualTo("Authentication Failed")
             .jsonPath("$.detail").exists()
             .jsonPath("$.instance").exists()
@@ -194,7 +167,7 @@ class LoginIntegrationTests @Autowired constructor(
         userRepository.save(suspendedUser)
 
         val request = LoginRequestDto(
-            email = "valid_user@example.com",
+            email = "suspended_user@example.com",
             password = "StrongP@ss1",
         )
 
@@ -205,11 +178,11 @@ class LoginIntegrationTests @Autowired constructor(
             .exchange()
 
         // Then
-        result.expectStatus().isUnauthorized
+        result.expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED)
             .expectHeader()
             .contentType(APPLICATION_PROBLEM_JSON)
             .expectBody()
-            .jsonPath("$.status").isEqualTo(401)
+            .jsonPath("$.status").isEqualTo(HttpStatus.UNAUTHORIZED.value())
             .jsonPath("$.title").isEqualTo("Authentication Failed")
             .jsonPath("$.detail").exists()
             .jsonPath("$.instance").exists()
@@ -231,7 +204,7 @@ class LoginIntegrationTests @Autowired constructor(
         userRepository.save(unverifiedUser)
 
         val request = LoginRequestDto(
-            email = "valid_user@example.com",
+            email = "unverified_user@example.com",
             password = "StrongP@ss1",
         )
 
@@ -242,11 +215,11 @@ class LoginIntegrationTests @Autowired constructor(
             .exchange()
 
         // Then
-        result.expectStatus().isForbidden
+        result.expectStatus().isEqualTo(HttpStatus.FORBIDDEN)
             .expectHeader()
             .contentType(APPLICATION_PROBLEM_JSON)
             .expectBody()
-            .jsonPath("$.status").isEqualTo(403)
+            .jsonPath("$.status").isEqualTo(HttpStatus.FORBIDDEN.value())
             .jsonPath("$.title").isEqualTo("Account unverified")
             .jsonPath("$.detail").exists()
             .jsonPath("$.instance").exists()
@@ -264,10 +237,10 @@ class LoginIntegrationTests @Autowired constructor(
             .exchange()
 
         // Then
-        result.expectStatus().isEqualTo(422)
+        result.expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT)
             .expectHeader().contentType(APPLICATION_PROBLEM_JSON)
             .expectBody()
-            .jsonPath("$.status").isEqualTo(422)
+            .jsonPath("$.status").isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT.value())
             .jsonPath("$.title").isEqualTo("Validation Failed")
             .jsonPath("$.detail").exists()
             .jsonPath("$.instance").exists()

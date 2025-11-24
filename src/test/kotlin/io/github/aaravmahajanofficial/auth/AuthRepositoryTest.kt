@@ -78,30 +78,6 @@ class AuthRepositoryTest @Autowired constructor(
     }
 
     @Test
-    fun `should find user by username`() {
-        // Given
-        testEntityManager.persistAndFlush(testUser)
-
-        // When
-        val foundUser = userRepository.findByUsername("john_doe")
-
-        // Then
-        assertNotNull(foundUser)
-        assertEquals(testUser.username, foundUser.username)
-    }
-
-    @Test
-    fun `should return null for non-existent username`() {
-        // Given
-
-        // When
-        val foundUser = userRepository.findByUsername("john_doe")
-
-        // Then
-        assertNull(foundUser)
-    }
-
-    @Test
     fun `should save and retrieve user with roles`() { // test many-to-many mapping between user and role
 
         // Given

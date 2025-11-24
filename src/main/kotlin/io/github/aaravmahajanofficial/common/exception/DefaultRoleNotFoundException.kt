@@ -15,4 +15,4 @@
  */
 package io.github.aaravmahajanofficial.common.exception
 
-class DefaultRoleNotFoundException(message: String) : RuntimeException(message)
+class DefaultRoleNotFoundException : RuntimeException("Required default system role missing")

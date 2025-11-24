@@ -16,12 +16,13 @@
 package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.TestcontainersConfiguration
-import io.github.aaravmahajanofficial.auth.register.RequestDto
+import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.users.Role
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
 import io.github.aaravmahajanofficial.users.User
 import io.github.aaravmahajanofficial.users.UserRepository
+import io.github.aaravmahajanofficial.users.UserStatus
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -29,9 +30,11 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
 import org.springframework.context.annotation.Import
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.test.web.reactive.server.WebTestClient
+import kotlin.test.assertEquals
 
 @Import(TestcontainersConfiguration::class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -51,13 +54,12 @@ class AuthIntegrationTests @Autowired constructor(
     @AfterEach
     fun tearDown() {
         userRepository.deleteAll()
-        roleRepository.deleteAll()
     }
 
     @Test
     fun `should register a new user successfully`() {
         // Given
-        val request = RequestDto(
+        val request = RegisterRequestDto(
             email = "john.doe@example.com",
             username = "john_doe_123",
             password = "SecureP@ss123",
@@ -72,23 +74,29 @@ class AuthIntegrationTests @Autowired constructor(
             .bodyValue(request)
             .exchange()
 
-        // Then
-        result.expectStatus().isCreated
+        // Then - API contract
+        result.expectStatus().isEqualTo(HttpStatus.CREATED)
             .expectHeader().contentType(MediaType.APPLICATION_JSON)
             .expectBody()
             .jsonPath("$.data.id").exists()
             .jsonPath("$.data.email").isEqualTo(request.email)
             .jsonPath("$.data.username").isEqualTo(request.username)
             .jsonPath("$.data.phoneNumber").isEqualTo(request.phoneNumber)
-            .jsonPath("$.data.status").isEqualTo(AuthStatus.PENDING_VERIFICATION)
+            .jsonPath("$.data.status").isEqualTo(UserStatus.ACTIVE.value)
             .jsonPath("$.data.emailVerified").isEqualTo(false)
             .jsonPath("$.data.roles").isEqualTo(listOf(RoleType.CUSTOMER.value))
             .jsonPath("$.data.createdAt").isNotEmpty
             .jsonPath("$.meta.timestamp").isNotEmpty
+
+        // Then - DB State
+        val users = userRepository.findAll()
+        assertEquals(1,  users.size, "Exactly one user should be persisted")
+        val persistedUser = users.first()
+        assertEquals(request.email, persistedUser.email)
     }
 
     @Test
-    fun `should return 409 Conflict when email already exists`() { // test database has a UNIQUE constraint
+    fun `should return 409 Conflict when email already exists`() { // tests unique email constraint and domain handling
         // Given
         val existingUser = User(
             email = "john.doe@example.com",
@@ -103,8 +111,8 @@ class AuthIntegrationTests @Autowired constructor(
 
         // Try to register with same email
 
-        val request = RequestDto(
-            email = "john.doe@example.com",
+        val request = RegisterRequestDto(
+            email = "john.doe@example.com", // same email as existingUser
             username = "john_doe_123",
             password = "SecureP@ss123",
             firstName = "John",
@@ -118,19 +126,22 @@ class AuthIntegrationTests @Autowired constructor(
             .bodyValue(request)
             .exchange()
 
-        // Then
-        result.expectStatus().is4xxClientError // 409 Conflict
+        // Then - API contract
+        result.expectStatus().isEqualTo(HttpStatus.CONFLICT) // 409 Conflict
             .expectHeader().contentType(APPLICATION_PROBLEM_JSON)
             .expectBody()
-            .jsonPath("$.status").isEqualTo(409)
-            .jsonPath("$.title").isEqualTo("Resource Conflict")
+            .jsonPath("$.status").isEqualTo(HttpStatus.CONFLICT.value())
+            .jsonPath("$.title").isEqualTo("User Already Exists")
             .jsonPath("$.detail").exists()
             .jsonPath("$.instance").exists()
+
+        // Then - DB State
+        assertEquals(1, userRepository.count(), "Email conflict must not create additional users")
     }
 
     @Test
     fun `should return 422 Unprocessable Content on validation failure`() {
-        val invalidRequest = RequestDto(
+        val invalidRequest = RegisterRequestDto(
             email = "not-an-email",
             username = "",
             password = "123",
@@ -145,15 +156,18 @@ class AuthIntegrationTests @Autowired constructor(
             .bodyValue(invalidRequest)
             .exchange()
 
-        // Then
-        result.expectStatus().is4xxClientError
+        // Then - API contract
+        result.expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT)
             .expectHeader().contentType(APPLICATION_PROBLEM_JSON)
             .expectBody()
-            .jsonPath("$.status").isEqualTo(422)
+            .jsonPath("$.status").isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT.value())
             .jsonPath("$.title").isEqualTo("Validation Failed")
             .jsonPath("$.detail").exists()
             .jsonPath("$.instance").exists()
             .jsonPath("$.validationErrors").isArray
             .jsonPath("$.validationErrors[?(@.field=='email')]").exists()
+
+        // Then - DB State
+        assertEquals(0, userRepository.count(), "Validation failure must not persist any user")
     }
 }

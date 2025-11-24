@@ -15,4 +15,4 @@
  */
 package io.github.aaravmahajanofficial.common.exception
 
-open class AuthenticationFailedException(message: String) : RuntimeException(message)
+open class AuthenticationFailedException : RuntimeException("Invalid authentication credentials")

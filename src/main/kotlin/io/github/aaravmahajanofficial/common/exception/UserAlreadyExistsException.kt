@@ -15,4 +15,5 @@
  */
 package io.github.aaravmahajanofficial.common.exception
 
-class UserAlreadyExistsException(message: String) : ResourceConflictException(message)
+class UserAlreadyExistsException(message: String = "User with identical credentials already exists") :
+    RuntimeException(message)

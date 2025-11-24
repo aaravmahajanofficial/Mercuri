@@ -17,8 +17,8 @@ package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.login.LoginResponseDto
-import io.github.aaravmahajanofficial.auth.register.RequestDto
-import io.github.aaravmahajanofficial.auth.register.ResponseDto
+import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
+import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
 import io.github.aaravmahajanofficial.common.ApiResponse
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -39,7 +39,9 @@ class AuthController(private val authService: AuthService) {
         consumes = [APPLICATION_JSON_VALUE],
         produces = [APPLICATION_JSON_VALUE, APPLICATION_PROBLEM_JSON_VALUE],
     )
-    fun register(@Valid @RequestBody requestBody: RequestDto): ResponseEntity<ApiResponse<ResponseDto>> {
+    fun register(
+        @Valid @RequestBody requestBody: RegisterRequestDto,
+    ): ResponseEntity<ApiResponse<RegisterResponseDto>> {
         val user = authService.register(requestBody)
         return ResponseEntity
             .status(HttpStatus.CREATED)

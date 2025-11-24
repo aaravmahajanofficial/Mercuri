@@ -15,17 +15,17 @@
  */
 package io.github.aaravmahajanofficial.auth.register
 
-import io.github.aaravmahajanofficial.auth.AuthStatus
 import io.github.aaravmahajanofficial.users.RoleType
+import io.github.aaravmahajanofficial.users.UserStatus
 import java.time.Instant
 import java.util.UUID
 
-data class ResponseDto(
+data class RegisterResponseDto(
     val id: UUID,
     val email: String,
     val username: String,
     val phoneNumber: String,
-    val status: AuthStatus,
+    val status: UserStatus,
     val emailVerified: Boolean,
     val createdAt: Instant,
     val roles: List<RoleType>,
