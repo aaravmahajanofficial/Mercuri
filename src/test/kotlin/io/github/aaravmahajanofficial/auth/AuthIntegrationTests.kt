@@ -92,7 +92,8 @@ class AuthIntegrationTests @Autowired constructor(
         val savedUser = userRepository.findByEmail(registerRequest.email)
         savedUser.shouldNotBeNull() // User should be persisted in the database
         savedUser.email shouldBe registerRequest.email
-        savedUser.roles.shouldHaveSize(1).first().name shouldBe RoleType.CUSTOMER
+        savedUser.roles.shouldHaveSize(1)
+        savedUser.roles.first().name shouldBe RoleType.CUSTOMER
         savedUser.passwordHash shouldNotBe registerRequest.password // Password must be hashed before saving to DB
         passwordEncoder.matches(registerRequest.password, savedUser.passwordHash).shouldBeTrue()
     }

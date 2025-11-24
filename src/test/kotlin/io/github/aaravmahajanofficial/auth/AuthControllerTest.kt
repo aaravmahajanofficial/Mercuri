@@ -227,7 +227,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
             assertConflict(
                 result = result,
                 title = "User Already Exists",
-                detail = "That email address is taken. Try another",
+                detail = "That email address is taken. Try another.",
                 instance = "/api/v1/auth/register",
             )
 

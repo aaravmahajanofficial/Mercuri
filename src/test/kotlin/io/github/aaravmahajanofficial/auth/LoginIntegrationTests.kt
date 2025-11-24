@@ -116,7 +116,7 @@ class LoginIntegrationTests @Autowired constructor(
     }
 
     @Test
-    fun `should fail with 401 login with non-existent user`() {
+    fun `should fail with 401 on login with non-existent user`() {
         // Given
         val request = LoginRequestDto(
             email = "ghostUser@example.com",

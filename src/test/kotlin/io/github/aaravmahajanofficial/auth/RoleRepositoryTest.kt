@@ -47,7 +47,6 @@ class RoleRepositoryTest @Autowired constructor(
 
         // Then
         foundRole.shouldNotBeNull()
-        foundRole.shouldNotBeNull()
         foundRole.name shouldBe RoleType.CUSTOMER
     }
 

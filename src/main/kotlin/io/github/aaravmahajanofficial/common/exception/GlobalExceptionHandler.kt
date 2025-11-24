@@ -121,7 +121,7 @@ class GlobalExceptionHandler {
         return ProblemDetail.forStatus(HttpStatus.CONFLICT).apply {
             type = conflictType
             title = "User Already Exists"
-            detail = "That email address is taken. Try another"
+            detail = "That email address is taken. Try another."
             instance = URI.create(request.requestURI)
         }
     }
