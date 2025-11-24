@@ -49,8 +49,8 @@ class GlobalExceptionHandler {
         val fieldErrors = ex.bindingResult.fieldErrors.map { error ->
             mapOf(
                 "field" to error.field,
-                "message" to error.defaultMessage,
-                "code" to error.code,
+                "message" to (error.defaultMessage ?: "Invalid Value"),
+                "code" to (error.code ?: "Invalid"),
             )
         }
 

@@ -109,5 +109,5 @@ class User(
         address.user = null
     }
 
-    override fun toString(): String = "User(id=$id, email=$email, fullName=${fullName()} status=$status)"
+    override fun toString(): String = "User(id=$id, email=$email, fullName=${fullName()}, status=$status)"
 }

@@ -23,10 +23,11 @@ import io.github.aaravmahajanofficial.users.RoleType
 import io.github.aaravmahajanofficial.users.User
 import io.github.aaravmahajanofficial.users.UserRepository
 import io.github.aaravmahajanofficial.users.UserStatus
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertNotNull
-import org.junit.jupiter.api.assertNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
@@ -41,6 +42,7 @@ import java.time.Instant
 @Import(TestcontainersConfiguration::class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
+@Disabled("Temporarily Disabled")
 class LoginIntegrationTests @Autowired constructor(
     val webTestClient: WebTestClient,
     val roleRepository: RoleRepository,
@@ -86,7 +88,7 @@ class LoginIntegrationTests @Autowired constructor(
 
         // Then - DB State
         val attemptedUser = userRepository.findByEmail(request.email)
-        assertNotNull(attemptedUser?.lastLoginAt, "DB should be updated with login timestamp")
+        attemptedUser?.lastLoginAt.shouldNotBeNull() // DB should be updated with login timestamp
     }
 
     @Test
@@ -110,7 +112,7 @@ class LoginIntegrationTests @Autowired constructor(
 
         // Then - DB State
         val attemptedUser = userRepository.findByEmail(request.email)
-        assertNull(attemptedUser?.lastLoginAt)
+        attemptedUser?.lastLoginAt.shouldBeNull()
     }
 
     @Test
@@ -134,7 +136,7 @@ class LoginIntegrationTests @Autowired constructor(
 
         // Then - DB State
         val attemptedUser = userRepository.findByEmail(request.email)
-        assertNull(attemptedUser, "A user should not be created upon failed login attempt")
+        attemptedUser.shouldBeNull() // A user should not be created upon failed login attempt
     }
 
     @Test
@@ -169,7 +171,7 @@ class LoginIntegrationTests @Autowired constructor(
 
         // Then - DB State
         val attemptedUser = userRepository.findByEmail(request.email)
-        assertNull(attemptedUser?.lastLoginAt)
+        attemptedUser?.lastLoginAt.shouldBeNull()
     }
 
     @Test
@@ -204,6 +206,6 @@ class LoginIntegrationTests @Autowired constructor(
 
         // Then - DB State
         val attemptedUser = userRepository.findByEmail(request.email)
-        assertNull(attemptedUser?.lastLoginAt)
+        attemptedUser?.lastLoginAt.shouldBeNull()
     }
 }

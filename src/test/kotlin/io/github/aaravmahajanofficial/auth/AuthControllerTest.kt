@@ -25,6 +25,7 @@ import io.github.aaravmahajanofficial.common.exception.AuthenticationFailedExcep
 import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
 import io.github.aaravmahajanofficial.users.RoleType
 import io.github.aaravmahajanofficial.users.UserStatus
+import io.kotest.matchers.shouldBe
 import org.hamcrest.CoreMatchers.hasItem
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -48,7 +49,6 @@ import org.springframework.test.web.servlet.post
 import tools.jackson.databind.ObjectMapper
 import java.time.Instant
 import java.util.UUID
-import kotlin.test.assertEquals
 
 @WebMvcTest(AuthController::class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -112,11 +112,11 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
             // to verify if the input sent to the service method is correct
             verify(authService).register(
                 check { capturedDto ->
-                    assertEquals(request.email, capturedDto.email)
-                    assertEquals(request.password, capturedDto.password)
-                    assertEquals(request.firstName, capturedDto.firstName)
-                    assertEquals(request.lastName, capturedDto.lastName)
-                    assertEquals(request.phoneNumber, capturedDto.phoneNumber)
+                    capturedDto.email shouldBe request.email
+                    capturedDto.password shouldBe request.password
+                    capturedDto.firstName shouldBe request.firstName
+                    capturedDto.lastName shouldBe request.lastName
+                    capturedDto.phoneNumber shouldBe request.phoneNumber
                 },
             )
         }
@@ -314,7 +314,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
 
             verify(authService, times(1)).login(
                 check { capturedDto ->
-                    assertEquals(request.email, capturedDto.email)
+                    capturedDto.email shouldBe request.email
                 },
             )
         }

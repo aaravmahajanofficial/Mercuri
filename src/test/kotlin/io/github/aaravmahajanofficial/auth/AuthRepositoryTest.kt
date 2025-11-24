@@ -21,16 +21,16 @@ import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
 import io.github.aaravmahajanofficial.users.User
 import io.github.aaravmahajanofficial.users.UserRepository
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertNotNull
-import org.junit.jupiter.api.assertNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager
 import org.springframework.context.annotation.Import
 import org.springframework.data.repository.findByIdOrNull
-import kotlin.test.assertEquals
 
 @DataJpaTest
 @Import(TestcontainersConfiguration::class)
@@ -61,8 +61,8 @@ class AuthRepositoryTest @Autowired constructor(
         val foundUser = userRepository.findByEmail("john.doe@example.com")
 
         // Then
-        assertNotNull(foundUser)
-        assertEquals(testUser.email, foundUser.email)
+        foundUser.shouldNotBeNull()
+        foundUser.email shouldBe testUser.email
     }
 
     @Test
@@ -73,7 +73,7 @@ class AuthRepositoryTest @Autowired constructor(
         val foundUser = userRepository.findByEmail("john.doe@example.com")
 
         // Then
-        assertNull(foundUser)
+        foundUser.shouldBeNull()
     }
 
     @Test
@@ -95,7 +95,7 @@ class AuthRepositoryTest @Autowired constructor(
         val foundUser = userRepository.findByIdOrNull(testUser.id!!)
 
         // Then
-        assertEquals(1, foundUser?.roles?.size) // assure only 1 role is persisted
-        assertEquals(RoleType.CUSTOMER, foundUser?.roles?.first()?.name) // exactly the one that was persisted
+        foundUser?.roles?.size shouldBe 1 // assure only 1 role is persisted
+        foundUser?.roles?.first()?.name shouldBe RoleType.CUSTOMER // exactly the one that was persisted
     }
 }

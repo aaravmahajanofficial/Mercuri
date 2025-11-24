@@ -22,11 +22,15 @@ import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
 import io.github.aaravmahajanofficial.users.User
 import io.github.aaravmahajanofficial.users.UserRepository
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertNotNull
-import org.junit.jupiter.api.assertNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
@@ -35,9 +39,6 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.web.reactive.server.WebTestClient
-import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
 
 @Import(TestcontainersConfiguration::class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -89,11 +90,11 @@ class AuthIntegrationTests @Autowired constructor(
 
         // Then - DB State
         val savedUser = userRepository.findByEmail(registerRequest.email)
-        assertNotNull(savedUser, "User should be persisted in the database")
-        assertEquals(registerRequest.email, savedUser.email)
-        assertEquals(RoleType.CUSTOMER, savedUser.roles.first().name)
-        assertNotEquals(registerRequest.password, savedUser.passwordHash, "Password must be hashed before saving to DB")
-        assertTrue(passwordEncoder.matches(registerRequest.password, savedUser.passwordHash))
+        savedUser.shouldNotBeNull() // User should be persisted in the database
+        savedUser.email shouldBe registerRequest.email
+        savedUser.roles.shouldHaveSize(1).first().name shouldBe RoleType.CUSTOMER
+        savedUser.passwordHash shouldNotBe registerRequest.password // Password must be hashed before saving to DB
+        passwordEncoder.matches(registerRequest.password, savedUser.passwordHash).shouldBeTrue()
     }
 
     @Test
@@ -124,7 +125,7 @@ class AuthIntegrationTests @Autowired constructor(
             .exchange().expectStatus().isEqualTo(HttpStatus.CONFLICT)
 
         // Then - DB State
-        assertEquals(1, userRepository.count(), "Constraint ensures no duplicate records")
+        userRepository.count() shouldBe 1 // Constraint ensures no duplicate records
     }
 
     @Test
@@ -145,6 +146,6 @@ class AuthIntegrationTests @Autowired constructor(
 
         // Then - DB State
         val user = userRepository.findByEmail(registerRequest.email)
-        assertNull(user, "User should not exist in DB")
+        user.shouldBeNull() // User should not exist in DB
     }
 }
