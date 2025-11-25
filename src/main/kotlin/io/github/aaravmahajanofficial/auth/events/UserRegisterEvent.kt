@@ -18,4 +18,4 @@ package io.github.aaravmahajanofficial.auth.events
 import io.github.aaravmahajanofficial.users.User
 import org.springframework.context.ApplicationEvent
 
-class UserRegisteredEvent(val user: User) : ApplicationEvent(user)
+class UserRegisterEvent(val user: User) : ApplicationEvent(user)

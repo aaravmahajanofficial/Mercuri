@@ -16,7 +16,7 @@
 package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.auth.events.UserLoginEvent
-import io.github.aaravmahajanofficial.auth.events.UserRegisteredEvent
+import io.github.aaravmahajanofficial.auth.events.UserRegisterEvent
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.login.LoginResponseDto
 import io.github.aaravmahajanofficial.auth.mappers.toRegisterResponse
@@ -67,7 +67,7 @@ class AuthService(
         // guaranteed to be non-null within this method.
         val savedUser = userRepository.saveAndFlush(user)
 
-        applicationEventPublisher.publishEvent(UserRegisteredEvent(savedUser))
+        applicationEventPublisher.publishEvent(UserRegisterEvent(savedUser))
 
         return savedUser.toRegisterResponse()
     }
@@ -90,6 +90,7 @@ class AuthService(
 
         val authStatus = AuthStatus.VERIFIED
         user.lastLoginAt = Instant.now()
+        user.updatedAt = Instant.now()
         val updatedUser = userRepository.saveAndFlush(user)
 
         applicationEventPublisher.publishEvent(UserLoginEvent(updatedUser))
@@ -97,7 +98,7 @@ class AuthService(
         return LoginResponseDto(
             accessToken = "accessToken",
             authStatus = authStatus,
-            user = user.toUserDto(),
+            user = updatedUser.toUserDto(),
         )
     }
 }

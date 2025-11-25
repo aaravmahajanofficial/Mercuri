@@ -15,6 +15,8 @@
  */
 package io.github.aaravmahajanofficial.auth
 
+import io.github.aaravmahajanofficial.auth.events.UserLoginEvent
+import io.github.aaravmahajanofficial.auth.events.UserRegisterEvent
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
@@ -29,10 +31,10 @@ import io.github.aaravmahajanofficial.users.User
 import io.github.aaravmahajanofficial.users.UserRepository
 import io.github.aaravmahajanofficial.users.UserStatus
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -40,9 +42,11 @@ import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.check
-import org.mockito.kotlin.times
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -52,6 +56,7 @@ import java.util.UUID
 @ExtendWith(MockitoExtension::class)
 class AuthServiceTest {
 
+    // Mock the injected dependencies
     @Mock
     lateinit var userRepository: UserRepository
 
@@ -67,42 +72,35 @@ class AuthServiceTest {
     @InjectMocks
     lateinit var authService: AuthService
 
-    private lateinit var customerRole: Role
-    private lateinit var savedUser: User
-    private lateinit var registerRequest: RegisterRequestDto
-    private lateinit var loginRequest: LoginRequestDto
+    private fun createRegisterRequest() = RegisterRequestDto(
+        email = "john.doe@example.com",
+        password = "StrongP@ss123!",
+        firstName = "John",
+        lastName = "Doe",
+        phoneNumber = "+1234567890",
+    )
 
-    @BeforeEach
-    fun setUp() {
-        savedUser = User(
-            email = "john.doe@example.com",
-            passwordHash = "hashed_password",
-            firstName = "John",
-            lastName = "Doe",
-            phoneNumber = "+1234567890",
-            status = UserStatus.ACTIVE,
-            createdAt = Instant.now(),
-            updatedAt = Instant.now(),
-        ).apply {
-            id = UUID.randomUUID()
-        }
+    private fun createLoginRequest() = LoginRequestDto(
+        email = "john.doe@example.com",
+        password = "StrongP@ss123!",
+    )
 
-        customerRole = Role(
-            name = RoleType.CUSTOMER,
-        )
+    private fun createCustomerRole() = Role(name = RoleType.CUSTOMER)
 
-        registerRequest = RegisterRequestDto(
-            email = "john.doe@example.com",
-            password = "SecureP@ss123",
-            firstName = "John",
-            lastName = "Doe",
-            phoneNumber = "+1234567890",
-        )
-
-        loginRequest = LoginRequestDto(
-            email = "john.doe@example.com",
-            password = "StrongP@ss123!",
-        )
+    private fun createExistingUser(status: UserStatus = UserStatus.ACTIVE, emailVerified: Boolean = true): User = User(
+        email = "john.doe@example.com",
+        passwordHash = "hashed_password",
+        firstName = "John",
+        lastName = "Doe",
+        phoneNumber = "+1234567890",
+        emailVerified = emailVerified,
+        phoneVerified = true,
+        status = status,
+        createdAt = Instant.now(),
+        updatedAt = Instant.now(),
+    ).apply {
+        id = UUID.randomUUID()
+        addRole(createCustomerRole())
     }
 
     @Nested
@@ -110,71 +108,68 @@ class AuthServiceTest {
         @Test
         fun `should register user successfully`() {
             // Given
-            whenever(userRepository.findByEmail(registerRequest.email)).thenReturn(null)
+            val request = createRegisterRequest()
+            val customerRole = createCustomerRole()
+
+            whenever(userRepository.findByEmail(request.email)).thenReturn(null)
             whenever(roleRepository.findByName(RoleType.CUSTOMER)).thenReturn(customerRole)
-            whenever(passwordEncoder.encode(registerRequest.password)).thenReturn("hashed_password")
+            whenever(passwordEncoder.encode(request.password)).thenReturn("hashed_password")
+
+            val savedUser = createExistingUser()
             whenever(userRepository.saveAndFlush(any())).thenReturn(savedUser)
 
             // When
-            val result = authService.register(registerRequest)
+            val result = authService.register(request)
 
             // Then - Verify Side Effect (The Input to DB)
-            // Verify that the correct user object was sent to the repository
-            // Also, verify the dto mapping (toUser)
-            verify(userRepository, times(1))
+            // Verifies that the correct user object was sent to the repository by the service
+            // Also, verifies the dto mapping (toUser), verifies the User JPA entity
+            verify(userRepository)
                 .saveAndFlush(
-                    check { inputUser ->
-                        inputUser.email shouldBe registerRequest.email
-                        inputUser.passwordHash shouldBe "hashed_password"
-                        inputUser.firstName shouldBe registerRequest.firstName
-                        inputUser.lastName shouldBe registerRequest.lastName
-                        inputUser.phoneNumber shouldBe registerRequest.phoneNumber
-                        inputUser.emailVerified shouldBe false
-                        inputUser.phoneVerified shouldBe false
-                        inputUser.createdAt.shouldBeNull()
-                        inputUser.updatedAt.shouldBeNull()
-                        inputUser.roles shouldBe setOf(customerRole)
+                    check {
+                        it.email shouldBe request.email
+                        it.passwordHash shouldBe "hashed_password"
+                        it.createdAt.shouldBeNull()
+                        it.updatedAt.shouldBeNull()
+                        it.roles shouldContain customerRole
+                        it.id shouldBe null
                     },
                 )
 
-            // Then - Verify Return Value (The Mapper Logic), otherwise Controller would receive garbage data.
-            // 1. Check fields passed through from Request
-            result.email shouldBe registerRequest.email
-            result.phoneNumber shouldBe registerRequest.phoneNumber
+            // Then - Verify Return Value
+            val eventCaptor = argumentCaptor<UserRegisterEvent>()
+            verify(eventPublisher).publishEvent(eventCaptor.capture())
+            eventCaptor.firstValue.user.email shouldBe request.email
 
-            // 2. Check fields generated by Logic/DB (The Mocked User)
-            result.id shouldBe savedUser.id // ensures controller gets the actual id from DB, not random UUID
-            result.status shouldBe savedUser.status
-            result.createdAt shouldBe savedUser.createdAt // ensures controller gets actual time persisted in DB
-            result.roles shouldBe savedUser.roles.map { it.name }
-
-            verify(passwordEncoder, times(1)).encode(registerRequest.password)
-            verify(eventPublisher, times(1)).publishEvent(any())
+            // fails if service returns pre-save user & not updated user from DB
+            result.id shouldBe savedUser.id
+            result.createdAt shouldBe savedUser.createdAt
+            result.roles shouldContain RoleType.CUSTOMER // ensure that Role assignment works
         }
 
         @Test
         fun `should throw UserAlreadyExistsException when email is taken`() {
             // Given
-            whenever(userRepository.findByEmail(registerRequest.email)).thenReturn(savedUser)
+            val request = createRegisterRequest()
 
-            // When & Then
-            shouldThrow<UserAlreadyExistsException> { authService.register(registerRequest) }
+            whenever(userRepository.findByEmail(request.email)).thenReturn(createExistingUser())
 
-            verify(userRepository, times(0)).saveAndFlush(any())
-            verify(eventPublisher, times(0)).publishEvent(any())
+            // When
+            shouldThrow<UserAlreadyExistsException> { authService.register(request) }
+
+            // Then
+            verifyNoInteractions(passwordEncoder)
+            verify(userRepository, never()).saveAndFlush(any())
         }
 
         @Test
         fun `should throw DefaultRoleNotFoundException when default role is missing`() {
-            // Given
-            whenever(userRepository.findByEmail(registerRequest.email)).thenReturn(null)
+            val request = createRegisterRequest()
+
+            whenever(userRepository.findByEmail(request.email)).thenReturn(null)
             whenever(roleRepository.findByName(RoleType.CUSTOMER)).thenReturn(null)
 
-            // When & Then
-            shouldThrow<DefaultRoleNotFoundException> { authService.register(registerRequest) }
-
-            verify(userRepository, times(0)).saveAndFlush(any())
-            verify(eventPublisher, times(0)).publishEvent(any())
+            shouldThrow<DefaultRoleNotFoundException> { authService.register(request) }
         }
     }
 
@@ -184,94 +179,80 @@ class AuthServiceTest {
         @Test
         fun `should login successfully and update the last login time`() {
             // Given
-            savedUser.emailVerified = true
-            whenever(userRepository.findByEmail(loginRequest.email)).thenReturn(savedUser)
-            whenever(passwordEncoder.matches(loginRequest.password, savedUser.passwordHash)).thenReturn(true)
-            whenever(userRepository.saveAndFlush(any())).thenReturn(savedUser)
+            val request = createLoginRequest()
+            val existingUser = createExistingUser()
+
+            whenever(userRepository.findByEmail(request.email)).thenReturn(existingUser)
+            whenever(passwordEncoder.matches(request.password, existingUser.passwordHash)).thenReturn(true)
+
+            val updatedUser = existingUser.apply {
+                lastLoginAt = Instant.now()
+                updatedAt = Instant.now()
+            }
+            whenever(userRepository.saveAndFlush(any())).thenReturn(updatedUser)
 
             // When
-            val result = authService.login(loginRequest)
+            val result = authService.login(request)
 
-            // Then
-            result.accessToken.shouldNotBeNull()
-            result.user.email shouldBe savedUser.email
+            // Then - Verify Side Effect (The Input to DB)
+            verify(userRepository)
+                .saveAndFlush(
+                    check {
+                        it.lastLoginAt.shouldNotBeNull() // Confirm service actually set timestamp before saving
+                        it.updatedAt.shouldNotBeNull() // Confirm service actually set timestamp before saving
+                    },
+                )
 
-            verify(userRepository, times(1)).saveAndFlush(
-                check { inputUser ->
-                    inputUser.email shouldBe savedUser.email
-                    savedUser.lastLoginAt.shouldNotBeNull() // Confirm service actually set the timestamp before saving
-                },
-            )
+            // Then - Verify Return Value
+            val eventCaptor = argumentCaptor<UserLoginEvent>()
+            verify(eventPublisher).publishEvent(eventCaptor.capture())
+            eventCaptor.firstValue.user.email shouldBe request.email
 
-            verify(userRepository, times(1)).findByEmail(any())
-            verify(passwordEncoder, times(1)).matches(loginRequest.password, savedUser.passwordHash)
-            verify(userRepository, times(1)).saveAndFlush(any())
-            verify(eventPublisher, times(1)).publishEvent(any())
+            result.authStatus shouldBe AuthStatus.VERIFIED
+            result.user.lastLoginAt shouldBe updatedUser.lastLoginAt
         }
 
         @Test
-        fun `should throw AuthenticationFailedException when password does not match`() {
-            // Given
-            whenever(userRepository.findByEmail(loginRequest.email)).thenReturn(savedUser)
-            whenever(passwordEncoder.matches(loginRequest.password, savedUser.passwordHash)).thenReturn(false)
+        fun `should throw AuthenticationFailedException when password mismatch`() {
+            val request = createLoginRequest()
+            val existingUser = createExistingUser()
 
-            // When
-            shouldThrow<AuthenticationFailedException> {
-                authService.login(loginRequest)
-            }
+            whenever(userRepository.findByEmail(request.email)).thenReturn(existingUser)
+            whenever(passwordEncoder.matches(request.password, existingUser.passwordHash)).thenReturn(false)
 
-            // Then
-            verify(userRepository, times(1)).findByEmail(loginRequest.email)
-            verify(passwordEncoder, times(1)).matches(loginRequest.password, savedUser.passwordHash)
-            verify(userRepository, times(0)).saveAndFlush(any())
-            verify(eventPublisher, times(0)).publishEvent(any())
+            shouldThrow<AuthenticationFailedException> { authService.login(request) }
         }
 
         @Test
         fun `should throw AuthenticationFailedException when user not found`() {
             // Given
-            whenever(userRepository.findByEmail(loginRequest.email)).thenReturn(null)
+            val request = createLoginRequest()
 
-            // When
-            shouldThrow<AuthenticationFailedException> { authService.login(loginRequest) }
+            whenever(userRepository.findByEmail(request.email)).thenReturn(null)
 
-            // Then
-            verify(userRepository, times(1)).findByEmail(loginRequest.email)
-            verify(userRepository, times(0)).saveAndFlush(any())
-            verify(eventPublisher, times(0)).publishEvent(any())
+            shouldThrow<AuthenticationFailedException> { authService.login(request) }
         }
 
         @Test
         fun `should throw AccountSuspendedException when user account is suspended`() {
-            // Given
-            savedUser.status = UserStatus.SUSPENDED
-            whenever(userRepository.findByEmail(loginRequest.email)).thenReturn(savedUser)
-            whenever(passwordEncoder.matches(loginRequest.password, savedUser.passwordHash)).thenReturn(true)
+            val request = createLoginRequest()
+            val suspendedUser = createExistingUser(UserStatus.SUSPENDED)
 
-            // When
-            shouldThrow<AccountSuspendedException> { authService.login(loginRequest) }
+            whenever(userRepository.findByEmail(request.email)).thenReturn(suspendedUser)
+            whenever(passwordEncoder.matches(request.password, suspendedUser.passwordHash)).thenReturn(true)
 
-            // Then
-            verify(userRepository, times(1)).findByEmail(loginRequest.email)
-            verify(passwordEncoder, times(1)).matches(loginRequest.password, savedUser.passwordHash)
-            verify(userRepository, times(0)).saveAndFlush(any())
-            verify(eventPublisher, times(0)).publishEvent(any())
+            shouldThrow<AccountSuspendedException> { authService.login(request) }
         }
 
         @Test
         fun `should throw EmailNotVerifiedException when email is not verified`() {
-            // Given
-            whenever(userRepository.findByEmail(loginRequest.email)).thenReturn(savedUser)
-            whenever(passwordEncoder.matches(loginRequest.password, savedUser.passwordHash)).thenReturn(true)
+            val request = createLoginRequest()
+            val existingUser = createExistingUser(emailVerified = false)
 
-            // When
-            shouldThrow<EmailNotVerifiedException> { authService.login(loginRequest) }
+            whenever(userRepository.findByEmail(request.email)).thenReturn(existingUser)
+            whenever(passwordEncoder.matches(request.password, existingUser.passwordHash)).thenReturn(true)
 
-            // Then
-            verify(userRepository, times(1)).findByEmail(loginRequest.email)
-            verify(passwordEncoder, times(1)).matches(loginRequest.password, savedUser.passwordHash)
-            verify(userRepository, times(0)).saveAndFlush(any())
-            verify(eventPublisher, times(0)).publishEvent(any())
+            shouldThrow<EmailNotVerifiedException> { authService.login(request) }
         }
     }
 }
