@@ -20,16 +20,11 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 
-data class RequestDto(
+data class RegisterRequestDto(
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
     @Size(max = 255)
     val email: String,
-
-    @NotBlank(message = "Username is required")
-    @Size(min = 3, max = 32)
-    @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "Username can only contain letters, numbers, and underscores")
-    val username: String,
 
     @NotBlank(message = "Password is required")
     @Size(min = 8, max = 128)

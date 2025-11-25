@@ -38,6 +38,8 @@ class GlobalExceptionHandler {
         private val conflictType = URI.create("https://api.example.com/problems/conflict")
         private val malformedJsonType = URI.create("https://api.example.com/problems/malformed-json")
         private val internalType = URI.create("https://api.example.com/problems/internal-server-error")
+        private val unauthorizedType = URI.create("https://api.example.com/problems/unauthorized")
+        private val forbiddenType = URI.create("https://api.example.com/problems/forbidden")
     }
 
     private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
@@ -54,8 +56,8 @@ class GlobalExceptionHandler {
         }
 
         logger.warn(
-            "Validation failed at request {} -> {}",
-            sanitizeLogInput(request.requestURL),
+            "Validation failed at request {}: {}",
+            sanitizeLogInput(request.requestURI),
             sanitizeLogInput(fieldErrors),
         )
 
@@ -63,7 +65,7 @@ class GlobalExceptionHandler {
             type = validationType
             title = "Validation Failed"
             detail = "One or more fields failed validation."
-            instance = URI.create(request.requestURL.toString())
+            instance = URI.create(request.requestURI)
 
             setProperty("validationErrors", fieldErrors)
         }
@@ -75,17 +77,17 @@ class GlobalExceptionHandler {
         logger.warn(
             "Unsupported media type {} at {}",
             sanitizeLogInput(ex.contentType),
-            sanitizeLogInput(request.requestURL),
+            sanitizeLogInput(request.requestURI),
         )
 
         return ProblemDetail.forStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE).apply {
             type = mediaTypeType
             title = "Unsupported Media Type"
             detail = "The media type is not supported: ${ex.contentType}"
-            instance = URI.create(request.requestURL.toString())
+            instance = URI.create(request.requestURI)
 
             setProperty("mediaType", ex.contentType)
-            setProperty("supported", ex.supportedMediaTypes.map { it.toString() })
+            setProperty("supported", ex.supportedMediaTypes)
         }
     }
 
@@ -95,44 +97,93 @@ class GlobalExceptionHandler {
         ex: HttpRequestMethodNotSupportedException,
         request: HttpServletRequest,
     ): ProblemDetail {
-        logger.warn("Method {} not allowed at {}", sanitizeLogInput(ex.method), sanitizeLogInput(request.requestURL))
+        logger.warn("Method {} not allowed at {}", sanitizeLogInput(ex.method), sanitizeLogInput(request.requestURI))
 
         return ProblemDetail.forStatus(HttpStatus.METHOD_NOT_ALLOWED).apply {
             type = methodNotAllowedType
             title = "Method Not Allowed"
-            detail = ex.message ?: "This HTTP method is not allowed."
-            instance = URI.create(request.requestURL.toString())
+            detail = "The HTTP method used is not allowed for this endpoint."
+            instance = URI.create(request.requestURI)
 
             setProperty("rejectedMethod", ex.method)
             setProperty("allowedMethods", ex.supportedHttpMethods?.map { it.name() })
         }
     }
 
-    // 409 Conflict
-    @ExceptionHandler(ResourceConflictException::class)
-    fun handleResourceConflictException(ex: ResourceConflictException, request: HttpServletRequest): ProblemDetail {
-        logger.warn("Resource conflict at {} -> {}", sanitizeLogInput(request.requestURL), sanitizeLogInput(ex.message))
+    // 409 Resource Conflict
+    @ExceptionHandler(UserAlreadyExistsException::class)
+    fun handleUserAlreadyExistsException(ex: UserAlreadyExistsException, request: HttpServletRequest): ProblemDetail {
+        logger.warn(
+            "User registration conflict at {}: {}",
+            sanitizeLogInput(request.requestURI),
+            ex.message,
+        )
 
         return ProblemDetail.forStatus(HttpStatus.CONFLICT).apply {
             type = conflictType
-            title = "Resource Conflict"
-            detail = ex.message ?: "A resource conflict occurred."
-            instance = URI.create(request.requestURL.toString())
+            title = "User Already Exists"
+            detail = "That email address is taken. Try another."
+            instance = URI.create(request.requestURI)
         }
     }
 
     // 400 Malformed JSON
     @ExceptionHandler(HttpMessageNotReadableException::class)
     fun handleMalformedJson(ex: HttpMessageNotReadableException, request: HttpServletRequest): ProblemDetail {
-        logger.warn("Malformed JSON at {} -> {}", sanitizeLogInput(request.requestURL), sanitizeLogInput(ex.message))
+        logger.warn("Malformed JSON at {}: {}", sanitizeLogInput(request.requestURI), ex.message)
 
         return ProblemDetail.forStatus(HttpStatus.BAD_REQUEST).apply {
             type = malformedJsonType
             title = "Malformed JSON"
             detail = "Invalid or malformed JSON payload."
-            instance = URI.create(request.requestURL.toString())
+            instance = URI.create(request.requestURI)
 
-            setProperty("cause", ex.mostSpecificCause.message)
+            setProperty("cause", "JSON parsing error")
+        }
+    }
+
+    // 401 Unauthorized
+    @ExceptionHandler(AuthenticationFailedException::class)
+    fun handleAuthenticationFailed(ex: AuthenticationFailedException, request: HttpServletRequest): ProblemDetail {
+        logger.warn(
+            "Authentication failed at {}: {}",
+            sanitizeLogInput(request.requestURI),
+            ex.message,
+        )
+
+        return ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED).apply {
+            type = unauthorizedType
+            title = "Authentication Failed"
+            detail = "Invalid email or password. Please check your credentials and try again."
+            instance = URI.create(request.requestURI)
+        }
+    }
+
+    // 403 Forbidden
+    @ExceptionHandler(AccountSuspendedException::class)
+    fun handleAccountSuspended(ex: AccountSuspendedException, request: HttpServletRequest): ProblemDetail {
+        logger.warn("Suspended user attempted login {}: {}", sanitizeLogInput(request.requestURI), ex.message)
+        return ProblemDetail.forStatus(HttpStatus.FORBIDDEN).apply {
+            type = forbiddenType
+            title = "Account Suspended"
+            detail = "Your account is currently suspended. Please contact support."
+            instance = URI.create(request.requestURI)
+
+            setProperty("isSuspended", true)
+        }
+    }
+
+    // 403 Forbidden
+    @ExceptionHandler(EmailNotVerifiedException::class)
+    fun handleAccountSuspended(ex: EmailNotVerifiedException, request: HttpServletRequest): ProblemDetail {
+        logger.warn("Login attempt with unverified email at {}: {}", sanitizeLogInput(request.requestURI), ex.message)
+        return ProblemDetail.forStatus(HttpStatus.FORBIDDEN).apply {
+            type = forbiddenType
+            title = "Email Not Verified"
+            detail = "You must verify your email address before logging in."
+            instance = URI.create(request.requestURI)
+
+            setProperty("requiresVerification", true)
         }
     }
 
@@ -140,36 +191,29 @@ class GlobalExceptionHandler {
     @ExceptionHandler(DefaultRoleNotFoundException::class)
     fun handleMissingRole(ex: DefaultRoleNotFoundException, request: HttpServletRequest): ProblemDetail {
         logger.error(
-            "Missing default role on {}: {}",
-            sanitizeLogInput(request.requestURL),
-            sanitizeLogInput(ex.message),
+            "Default role configuration missing during request to {}: {}",
+            sanitizeLogInput(request.requestURI),
+            ex.message,
         )
 
         return ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR).apply {
             type = internalType
             title = "System Configuration Error"
-            detail = "Missing required default role."
-            instance = URI.create(request.requestURL.toString())
-
-            setProperty("role", "Default role missing")
+            detail = "A required system role is misconfigured. Please contact support."
+            instance = URI.create(request.requestURI)
         }
     }
 
     // 500 Internal Server Error (Catch-all)
     @ExceptionHandler(Exception::class)
     fun handleGeneralException(ex: Exception, request: HttpServletRequest): ProblemDetail {
-        logger.error(
-            "Unexpected error occurred on {}: {}",
-            sanitizeLogInput(request.requestURL),
-            sanitizeLogInput(ex.message),
-            ex,
-        )
+        logger.error("Unexpected error occurred on {}: {}", sanitizeLogInput(request.requestURI), ex.message, ex)
 
         return ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR).apply {
             type = internalType
             title = "Internal Server Error"
             detail = "An unexpected error occurred."
-            instance = URI.create(request.requestURL.toString())
+            instance = URI.create(request.requestURI)
         }
     }
 }

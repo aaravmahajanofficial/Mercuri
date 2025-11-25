@@ -13,12 +13,15 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.users
+package io.github.aaravmahajanofficial.auth.mappers
 
-import com.fasterxml.jackson.annotation.JsonValue
+import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
+import io.github.aaravmahajanofficial.users.User
 
-enum class UserStatus(@get:JsonValue val value: String) {
-    ACTIVE("active"),
-    SUSPENDED("suspended"),
-    DELETED("deleted"),
-}
+fun RegisterRequestDto.toUser(encodedPassword: String): User = User(
+    email = email,
+    passwordHash = encodedPassword,
+    firstName = firstName,
+    lastName = lastName,
+    phoneNumber = phoneNumber,
+)

@@ -13,20 +13,32 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.auth.register
+package io.github.aaravmahajanofficial.auth.login
 
 import io.github.aaravmahajanofficial.auth.AuthStatus
 import io.github.aaravmahajanofficial.users.RoleType
+import io.github.aaravmahajanofficial.users.UserStatus
 import java.time.Instant
 import java.util.UUID
 
-data class ResponseDto(
+data class UserDto(
     val id: UUID,
     val email: String,
-    val username: String,
+    val firstName: String,
+    val lastName: String,
     val phoneNumber: String,
-    val status: AuthStatus,
     val emailVerified: Boolean,
+    val phoneVerified: Boolean,
+    val status: UserStatus,
     val createdAt: Instant,
+    val lastLoginAt: Instant,
     val roles: List<RoleType>,
+)
+
+data class LoginResponseDto(
+    val authStatus: AuthStatus,
+    val accessToken: String,
+    val tokenType: String = "Bearer",
+    val expiresIn: Long = 3600,
+    val user: UserDto,
 )

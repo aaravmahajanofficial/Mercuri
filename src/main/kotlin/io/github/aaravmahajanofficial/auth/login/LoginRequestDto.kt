@@ -13,12 +13,16 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.users
+package io.github.aaravmahajanofficial.auth.login
 
-import com.fasterxml.jackson.annotation.JsonValue
+import jakarta.validation.constraints.Email
+import jakarta.validation.constraints.NotBlank
 
-enum class UserStatus(@get:JsonValue val value: String) {
-    ACTIVE("active"),
-    SUSPENDED("suspended"),
-    DELETED("deleted"),
-}
+data class LoginRequestDto(
+    @NotBlank(message = "Email is required")
+    @Email(message = "Invalid email format")
+    val email: String,
+
+    @NotBlank(message = "Password is required")
+    val password: String,
+)

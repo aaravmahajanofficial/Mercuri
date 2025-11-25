@@ -13,12 +13,9 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.users
+package io.github.aaravmahajanofficial.auth.events
 
-import com.fasterxml.jackson.annotation.JsonValue
+import io.github.aaravmahajanofficial.users.User
+import org.springframework.context.ApplicationEvent
 
-enum class UserStatus(@get:JsonValue val value: String) {
-    ACTIVE("active"),
-    SUSPENDED("suspended"),
-    DELETED("deleted"),
-}
+class UserRegisterEvent(val user: User) : ApplicationEvent(user)

@@ -21,16 +21,16 @@ import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
 import io.github.aaravmahajanofficial.users.User
 import io.github.aaravmahajanofficial.users.UserRepository
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertNotNull
-import org.junit.jupiter.api.assertNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager
 import org.springframework.context.annotation.Import
 import org.springframework.data.repository.findByIdOrNull
-import kotlin.test.assertEquals
 
 @DataJpaTest
 @Import(TestcontainersConfiguration::class)
@@ -45,7 +45,6 @@ class AuthRepositoryTest @Autowired constructor(
     fun setUp() {
         testUser = User(
             email = "john.doe@example.com",
-            username = "john_doe",
             passwordHash = "hashed_password",
             firstName = "John",
             lastName = "Doe",
@@ -62,8 +61,8 @@ class AuthRepositoryTest @Autowired constructor(
         val foundUser = userRepository.findByEmail("john.doe@example.com")
 
         // Then
-        assertNotNull(foundUser)
-        assertEquals(testUser.email, foundUser.email)
+        foundUser.shouldNotBeNull()
+        foundUser.email shouldBe testUser.email
     }
 
     @Test
@@ -74,31 +73,7 @@ class AuthRepositoryTest @Autowired constructor(
         val foundUser = userRepository.findByEmail("john.doe@example.com")
 
         // Then
-        assertNull(foundUser)
-    }
-
-    @Test
-    fun `should find user by username`() {
-        // Given
-        testEntityManager.persistAndFlush(testUser)
-
-        // When
-        val foundUser = userRepository.findByUsername("john_doe")
-
-        // Then
-        assertNotNull(foundUser)
-        assertEquals(testUser.username, foundUser.username)
-    }
-
-    @Test
-    fun `should return null for non-existent username`() {
-        // Given
-
-        // When
-        val foundUser = userRepository.findByUsername("john_doe")
-
-        // Then
-        assertNull(foundUser)
+        foundUser.shouldBeNull()
     }
 
     @Test
@@ -120,7 +95,7 @@ class AuthRepositoryTest @Autowired constructor(
         val foundUser = userRepository.findByIdOrNull(testUser.id!!)
 
         // Then
-        assertEquals(1, foundUser?.roles?.size) // assure only 1 role is persisted
-        assertEquals(RoleType.CUSTOMER, foundUser?.roles?.first()?.name) // exactly the one that was persisted
+        foundUser?.roles?.size shouldBe 1 // assure only 1 role is persisted
+        foundUser?.roles?.first()?.name shouldBe RoleType.CUSTOMER // exactly the one that was persisted
     }
 }

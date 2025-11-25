@@ -13,9 +13,19 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.auth.events
+package io.github.aaravmahajanofficial.auth.register
 
-import io.github.aaravmahajanofficial.users.User
-import org.springframework.context.ApplicationEvent
+import io.github.aaravmahajanofficial.users.RoleType
+import io.github.aaravmahajanofficial.users.UserStatus
+import java.time.Instant
+import java.util.UUID
 
-class UserRegisteredEvent(val user: User) : ApplicationEvent(user)
+data class RegisterResponseDto(
+    val id: UUID,
+    val email: String,
+    val phoneNumber: String,
+    val status: UserStatus,
+    val emailVerified: Boolean,
+    val createdAt: Instant,
+    val roles: List<RoleType>,
+)

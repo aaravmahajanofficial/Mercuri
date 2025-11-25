@@ -15,10 +15,11 @@
  */
 package io.github.aaravmahajanofficial
 
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.test.web.servlet.ResultActionsDsl
 
-open class AbstractControllerTest {
+open class ProblemResponseAssertions {
 
     fun assertProblem(
         result: ResultActionsDsl,
@@ -38,13 +39,13 @@ open class AbstractControllerTest {
             if (expectedDetail != null) {
                 jsonPath("$.detail") { value(expectedDetail) }
             } else {
-                jsonPath("$.detail") { exists() }
+                jsonPath("$.detail") { isNotEmpty() }
             }
 
             if (expectedInstance != null) {
                 jsonPath("$.instance") { value(expectedInstance) }
             } else {
-                jsonPath("$.instance") { exists() }
+                jsonPath("$.instance") { isNotEmpty() }
             }
         }
     }
@@ -52,21 +53,21 @@ open class AbstractControllerTest {
     fun assertMethodNotAllowed(result: ResultActionsDsl, instance: String? = null) {
         assertProblem(
             result = result,
-            expectedStatus = 405,
             expectedType = "https://api.example.com/problems/method-not-allowed",
             expectedTitle = "Method Not Allowed",
             expectedInstance = instance,
+            expectedStatus = HttpStatus.METHOD_NOT_ALLOWED.value(),
         )
     }
 
     fun assertBadRequest(result: ResultActionsDsl, instance: String? = null) {
         assertProblem(
             result = result,
-            expectedStatus = 400,
             expectedType = "https://api.example.com/problems/malformed-json",
             expectedTitle = "Malformed JSON",
             expectedDetail = "Invalid or malformed JSON payload.",
             expectedInstance = instance,
+            expectedStatus = HttpStatus.BAD_REQUEST.value(),
         )
 
         result.andExpect {
@@ -74,14 +75,36 @@ open class AbstractControllerTest {
         }
     }
 
-    fun assertConflict(result: ResultActionsDsl, detail: String, instance: String? = null) {
+    fun assertUnauthorized(result: ResultActionsDsl, detail: String, instance: String? = null) {
         assertProblem(
             result = result,
-            expectedStatus = 409,
-            expectedType = "https://api.example.com/problems/conflict",
-            expectedTitle = "Resource Conflict",
+            expectedType = "https://api.example.com/problems/unauthorized",
+            expectedTitle = "Authentication Failed",
             expectedDetail = detail,
             expectedInstance = instance,
+            expectedStatus = HttpStatus.UNAUTHORIZED.value(),
+        )
+    }
+
+    fun assertForbidden(result: ResultActionsDsl, title: String, detail: String, instance: String? = null) {
+        assertProblem(
+            result = result,
+            expectedType = "https://api.example.com/problems/forbidden",
+            expectedTitle = title,
+            expectedDetail = detail,
+            expectedInstance = instance,
+            expectedStatus = HttpStatus.FORBIDDEN.value(),
+        )
+    }
+
+    fun assertConflict(result: ResultActionsDsl, title: String, detail: String, instance: String? = null) {
+        assertProblem(
+            result = result,
+            expectedType = "https://api.example.com/problems/conflict",
+            expectedTitle = title,
+            expectedDetail = detail,
+            expectedInstance = instance,
+            expectedStatus = HttpStatus.CONFLICT.value(),
         )
     }
 
@@ -89,9 +112,9 @@ open class AbstractControllerTest {
         assertProblem(
             result = result,
             expectedType = "https://api.example.com/problems/unsupported-media-type",
-            expectedStatus = 415,
             expectedTitle = "Unsupported Media Type",
             expectedInstance = instance,
+            expectedStatus = HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(),
         )
 
         result.andExpect {
@@ -100,14 +123,25 @@ open class AbstractControllerTest {
         }
     }
 
-    fun assertInternalServerError(result: ResultActionsDsl, instance: String? = null) {
+    fun assertUnprocessableContent(result: ResultActionsDsl, instance: String? = null) {
+        assertProblem(
+            result = result,
+            expectedType = "https://api.example.com/problems/validation",
+            expectedTitle = "Validation Failed",
+            expectedDetail = "One or more fields failed validation.",
+            expectedInstance = instance,
+            expectedStatus = HttpStatus.UNPROCESSABLE_CONTENT.value(),
+        )
+    }
+
+    fun assertInternalServerError(result: ResultActionsDsl, title: String, instance: String? = null) {
         assertProblem(
             result = result,
             expectedType = "https://api.example.com/problems/internal-server-error",
-            expectedStatus = 500,
-            expectedTitle = "Internal Server Error",
+            expectedTitle = title,
             expectedDetail = "An unexpected error occurred.",
             expectedInstance = instance,
+            expectedStatus = HttpStatus.INTERNAL_SERVER_ERROR.value(),
         )
     }
 }

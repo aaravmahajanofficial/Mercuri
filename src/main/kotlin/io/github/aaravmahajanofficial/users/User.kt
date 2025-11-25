@@ -40,9 +40,6 @@ class User(
     @Column(unique = true, nullable = false, length = 255)
     var email: String,
 
-    @Column(unique = true, nullable = false, length = 100)
-    var username: String,
-
     @Column(name = "password_hash", nullable = false, length = 255)
     var passwordHash: String,
 
@@ -92,7 +89,7 @@ class User(
     protected var _addresses: MutableSet<UserAddress> = mutableSetOf()
     val addresses: Set<UserAddress> get() = _addresses
 
-    fun fullName(): String = listOf(firstName, lastName).joinToString(" ").ifBlank { username }
+    fun fullName(): String = listOf(firstName, lastName).joinToString(" ")
 
     fun addRole(role: Role) {
         _roles.add(role)
@@ -112,5 +109,5 @@ class User(
         address.user = null
     }
 
-    override fun toString(): String = "User(id=$id, email=$email, username=$username, status=$status)"
+    override fun toString(): String = "User(id=$id, email=$email, fullName=${fullName()}, status=$status)"
 }

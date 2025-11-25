@@ -19,15 +19,15 @@ import io.github.aaravmahajanofficial.TestcontainersConfiguration
 import io.github.aaravmahajanofficial.users.Role
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
+import io.kotest.matchers.collections.shouldContainAll
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertNotNull
-import org.junit.jupiter.api.assertNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager
 import org.springframework.context.annotation.Import
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 @Import(TestcontainersConfiguration::class)
 @DataJpaTest
@@ -46,8 +46,8 @@ class RoleRepositoryTest @Autowired constructor(
         val foundRole = roleRepository.findByName(RoleType.CUSTOMER)
 
         // Then
-        assertNotNull(foundRole)
-        assertEquals(RoleType.CUSTOMER, foundRole.name)
+        foundRole.shouldNotBeNull()
+        foundRole.name shouldBe RoleType.CUSTOMER
     }
 
     @Test
@@ -57,7 +57,7 @@ class RoleRepositoryTest @Autowired constructor(
         val foundRole = roleRepository.findByName(RoleType.ADMIN)
 
         // Then
-        assertNull(foundRole)
+        foundRole.shouldBeNull()
     }
 
     @Test
@@ -76,19 +76,10 @@ class RoleRepositoryTest @Autowired constructor(
         val allRoles = roleRepository.findAll()
 
         // Then
-        assertEquals(4, allRoles.size)
+        allRoles.size shouldBe 4
 
         val allTypes = allRoles.map { it.name }
 
-        assertTrue(
-            allTypes.containsAll(
-                listOf(
-                    RoleType.CUSTOMER,
-                    RoleType.SELLER,
-                    RoleType.ADMIN,
-                    RoleType.SUPER_ADMIN,
-                ),
-            ),
-        )
+        allTypes shouldContainAll listOf(RoleType.CUSTOMER, RoleType.SELLER, RoleType.ADMIN, RoleType.SUPER_ADMIN)
     }
 }
