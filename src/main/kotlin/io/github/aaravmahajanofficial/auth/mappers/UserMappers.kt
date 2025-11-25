@@ -15,6 +15,7 @@
  */
 package io.github.aaravmahajanofficial.auth.mappers
 
+import io.github.aaravmahajanofficial.auth.login.UserDto
 import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
 import io.github.aaravmahajanofficial.users.User
 
@@ -26,4 +27,18 @@ fun User.toRegisterResponse(): RegisterResponseDto = RegisterResponseDto(
     emailVerified = emailVerified,
     createdAt = createdAt!!,
     roles = this.roles.map { it.name },
+)
+
+fun User.toUserDto(): UserDto = UserDto(
+    id = id!!,
+    email = email,
+    firstName = firstName,
+    lastName = lastName,
+    phoneNumber = phoneNumber,
+    emailVerified = emailVerified,
+    phoneVerified = phoneVerified,
+    status = status,
+    createdAt = createdAt!!,
+    lastLoginAt = lastLoginAt!!,
+    roles = roles.map { it.name },
 )

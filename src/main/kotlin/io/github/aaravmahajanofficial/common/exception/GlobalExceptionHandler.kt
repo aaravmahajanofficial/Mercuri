@@ -39,6 +39,7 @@ class GlobalExceptionHandler {
         private val malformedJsonType = URI.create("https://api.example.com/problems/malformed-json")
         private val internalType = URI.create("https://api.example.com/problems/internal-server-error")
         private val unauthorizedType = URI.create("https://api.example.com/problems/unauthorized")
+        private val forbiddenType = URI.create("https://api.example.com/problems/forbidden")
     }
 
     private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
@@ -155,6 +156,34 @@ class GlobalExceptionHandler {
             title = "Authentication Failed"
             detail = "Invalid email or password. Please check your credentials and try again."
             instance = URI.create(request.requestURI)
+        }
+    }
+
+    // 403 Forbidden
+    @ExceptionHandler(AccountSuspendedException::class)
+    fun handleAccountSuspended(ex: AccountSuspendedException, request: HttpServletRequest): ProblemDetail {
+        logger.warn("Suspended user attempted login {}: {}", sanitizeLogInput(request.requestURI), ex.message)
+        return ProblemDetail.forStatus(HttpStatus.FORBIDDEN).apply {
+            type = forbiddenType
+            title = "Account Suspended"
+            detail = "Your account is currently suspended. Please contact support."
+            instance = URI.create(request.requestURI)
+
+            setProperty("isSuspended", true)
+        }
+    }
+
+    // 403 Forbidden
+    @ExceptionHandler(EmailNotVerifiedException::class)
+    fun handleAccountSuspended(ex: EmailNotVerifiedException, request: HttpServletRequest): ProblemDetail {
+        logger.warn("Login attempt with unverified email at {}: {}", sanitizeLogInput(request.requestURI), ex.message)
+        return ProblemDetail.forStatus(HttpStatus.FORBIDDEN).apply {
+            type = forbiddenType
+            title = "Email Not Verified"
+            detail = "You must verify your email address before logging in."
+            instance = URI.create(request.requestURI)
+
+            setProperty("requiresVerification", true)
         }
     }
 

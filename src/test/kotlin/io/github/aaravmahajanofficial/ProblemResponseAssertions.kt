@@ -86,6 +86,17 @@ open class ProblemResponseAssertions {
         )
     }
 
+    fun assertForbidden(result: ResultActionsDsl, title: String, detail: String, instance: String? = null) {
+        assertProblem(
+            result = result,
+            expectedType = "https://api.example.com/problems/forbidden",
+            expectedTitle = title,
+            expectedDetail = detail,
+            expectedInstance = instance,
+            expectedStatus = HttpStatus.FORBIDDEN.value(),
+        )
+    }
+
     fun assertConflict(result: ResultActionsDsl, title: String, detail: String, instance: String? = null) {
         assertProblem(
             result = result,

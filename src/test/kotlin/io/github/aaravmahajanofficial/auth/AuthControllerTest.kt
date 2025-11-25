@@ -21,7 +21,9 @@ import io.github.aaravmahajanofficial.auth.login.LoginResponseDto
 import io.github.aaravmahajanofficial.auth.login.UserDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
+import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
 import io.github.aaravmahajanofficial.common.exception.AuthenticationFailedException
+import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
 import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
 import io.github.aaravmahajanofficial.users.RoleType
 import io.github.aaravmahajanofficial.users.UserStatus
@@ -389,6 +391,62 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
             }
 
             verify(authService, never()).login(any())
+        }
+
+        @Test
+        fun `should return 403 Forbidden when login with suspended account`() {
+            // Given
+            val request = LoginRequestDto(
+                email = "john.doe@example.com",
+                password = "StrongP@ss!1",
+            )
+
+            whenever(authService.login(any())).thenThrow(AccountSuspendedException())
+
+            // When
+            val result = mockMvc.post("/api/v1/auth/login") {
+                contentType = APPLICATION_JSON
+                content = objectMapper.writeValueAsString(request)
+                accept = APPLICATION_PROBLEM_JSON
+            }
+
+            // Then
+            assertForbidden(
+                result = result,
+                title = "Account Suspended",
+                detail = "Your account is currently suspended. Please contact support.",
+                instance = "/api/v1/auth/login",
+            )
+
+            verify(authService, times(1)).login(any())
+        }
+
+        @Test
+        fun `should return 403 Forbidden when email is not verified`() {
+            // Given
+            val request = LoginRequestDto(
+                email = "john.doe@example.com",
+                password = "StrongP@ss!1",
+            )
+
+            whenever(authService.login(any())).thenThrow(EmailNotVerifiedException())
+
+            // When
+            val result = mockMvc.post("/api/v1/auth/login") {
+                contentType = APPLICATION_JSON
+                content = objectMapper.writeValueAsString(request)
+                accept = APPLICATION_PROBLEM_JSON
+            }
+
+            // Then
+            assertForbidden(
+                result = result,
+                title = "Email Not Verified",
+                detail = "You must verify your email address before logging in.",
+                instance = "/api/v1/auth/login",
+            )
+
+            verify(authService, times(1)).login(any())
         }
 
         @Test
