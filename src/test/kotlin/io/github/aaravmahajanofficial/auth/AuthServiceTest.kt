@@ -17,8 +17,10 @@ package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
+import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
 import io.github.aaravmahajanofficial.common.exception.AuthenticationFailedException
 import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
+import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
 import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
 import io.github.aaravmahajanofficial.users.Role
 import io.github.aaravmahajanofficial.users.RoleRepository
@@ -31,7 +33,6 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -178,12 +179,12 @@ class AuthServiceTest {
     }
 
     @Nested
-    @Disabled("Temporarily Disabled")
     inner class Login {
 
         @Test
         fun `should login successfully and update the last login time`() {
             // Given
+            savedUser.emailVerified = true
             whenever(userRepository.findByEmail(loginRequest.email)).thenReturn(savedUser)
             whenever(passwordEncoder.matches(loginRequest.password, savedUser.passwordHash)).thenReturn(true)
             whenever(userRepository.saveAndFlush(any())).thenReturn(savedUser)
@@ -203,12 +204,13 @@ class AuthServiceTest {
             )
 
             verify(userRepository, times(1)).findByEmail(any())
+            verify(passwordEncoder, times(1)).matches(loginRequest.password, savedUser.passwordHash)
             verify(userRepository, times(1)).saveAndFlush(any())
             verify(eventPublisher, times(1)).publishEvent(any())
         }
 
         @Test
-        fun `should throw AuthenticationFailedException when invalid credentials`() {
+        fun `should throw AuthenticationFailedException when password does not match`() {
             // Given
             whenever(userRepository.findByEmail(loginRequest.email)).thenReturn(savedUser)
             whenever(passwordEncoder.matches(loginRequest.password, savedUser.passwordHash)).thenReturn(false)
@@ -220,6 +222,7 @@ class AuthServiceTest {
 
             // Then
             verify(userRepository, times(1)).findByEmail(loginRequest.email)
+            verify(passwordEncoder, times(1)).matches(loginRequest.password, savedUser.passwordHash)
             verify(userRepository, times(0)).saveAndFlush(any())
             verify(eventPublisher, times(0)).publishEvent(any())
         }
@@ -234,6 +237,39 @@ class AuthServiceTest {
 
             // Then
             verify(userRepository, times(1)).findByEmail(loginRequest.email)
+            verify(userRepository, times(0)).saveAndFlush(any())
+            verify(eventPublisher, times(0)).publishEvent(any())
+        }
+
+        @Test
+        fun `should throw AccountSuspendedException when user account is suspended`() {
+            // Given
+            savedUser.status = UserStatus.SUSPENDED
+            whenever(userRepository.findByEmail(loginRequest.email)).thenReturn(savedUser)
+            whenever(passwordEncoder.matches(loginRequest.password, savedUser.passwordHash)).thenReturn(true)
+
+            // When
+            shouldThrow<AccountSuspendedException> { authService.login(loginRequest) }
+
+            // Then
+            verify(userRepository, times(1)).findByEmail(loginRequest.email)
+            verify(passwordEncoder, times(1)).matches(loginRequest.password, savedUser.passwordHash)
+            verify(userRepository, times(0)).saveAndFlush(any())
+            verify(eventPublisher, times(0)).publishEvent(any())
+        }
+
+        @Test
+        fun `should throw EmailNotVerifiedException when email is not verified`() {
+            // Given
+            whenever(userRepository.findByEmail(loginRequest.email)).thenReturn(savedUser)
+            whenever(passwordEncoder.matches(loginRequest.password, savedUser.passwordHash)).thenReturn(true)
+
+            // When
+            shouldThrow<EmailNotVerifiedException> { authService.login(loginRequest) }
+
+            // Then
+            verify(userRepository, times(1)).findByEmail(loginRequest.email)
+            verify(passwordEncoder, times(1)).matches(loginRequest.password, savedUser.passwordHash)
             verify(userRepository, times(0)).saveAndFlush(any())
             verify(eventPublisher, times(0)).publishEvent(any())
         }

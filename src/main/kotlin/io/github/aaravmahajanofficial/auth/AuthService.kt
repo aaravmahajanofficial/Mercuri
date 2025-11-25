@@ -15,22 +15,29 @@
  */
 package io.github.aaravmahajanofficial.auth
 
+import io.github.aaravmahajanofficial.auth.events.UserLoginEvent
 import io.github.aaravmahajanofficial.auth.events.UserRegisteredEvent
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.login.LoginResponseDto
 import io.github.aaravmahajanofficial.auth.mappers.toRegisterResponse
 import io.github.aaravmahajanofficial.auth.mappers.toUser
+import io.github.aaravmahajanofficial.auth.mappers.toUserDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
+import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
+import io.github.aaravmahajanofficial.common.exception.AuthenticationFailedException
 import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
+import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
 import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
 import io.github.aaravmahajanofficial.users.UserRepository
+import io.github.aaravmahajanofficial.users.UserStatus
 import jakarta.transaction.Transactional
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
+import java.time.Instant
 
 @Service
 class AuthService(
@@ -66,5 +73,31 @@ class AuthService(
     }
 
     @Transactional
-    fun login(requestBody: LoginRequestDto): LoginResponseDto = TODO()
+    fun login(requestBody: LoginRequestDto): LoginResponseDto {
+        val user = userRepository.findByEmail(requestBody.email) ?: throw AuthenticationFailedException()
+
+        if (!passwordEncoder.matches(requestBody.password, user.passwordHash)) {
+            throw AuthenticationFailedException()
+        }
+
+        if (user.status == UserStatus.SUSPENDED) {
+            throw AccountSuspendedException()
+        }
+
+        if (!user.emailVerified) {
+            throw EmailNotVerifiedException()
+        }
+
+        val authStatus = AuthStatus.VERIFIED
+        user.lastLoginAt = Instant.now()
+        val updatedUser = userRepository.saveAndFlush(user)
+
+        applicationEventPublisher.publishEvent(UserLoginEvent(updatedUser))
+
+        return LoginResponseDto(
+            accessToken = "accessToken",
+            authStatus = authStatus,
+            user = user.toUserDto(),
+        )
+    }
 }

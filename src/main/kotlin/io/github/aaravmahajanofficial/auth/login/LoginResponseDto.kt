@@ -39,6 +39,6 @@ data class LoginResponseDto(
     val authStatus: AuthStatus,
     val accessToken: String,
     val tokenType: String = "Bearer",
-    val expiresIn: Long,
+    val expiresIn: Long = 3600,
     val user: UserDto,
 )
