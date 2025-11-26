@@ -37,7 +37,7 @@ class SecurityConfig {
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http.csrf { it.disable() }.sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
-                auth.requestMatchers("/api/v1/auth/register", "/api/v1/auth/login").permitAll()
+                auth.requestMatchers("/api/v1/auth/**").permitAll()
                     .anyRequest().authenticated() // all other endpoints require proper authentication
             }
 
