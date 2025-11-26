@@ -26,6 +26,9 @@ plugins {
 
 gitHooks {
     commitMsg { conventionalCommits() }
+    preCommit {
+        from(file(".githooks/pre-commit"))
+    }
     createHooks()
 }
 
