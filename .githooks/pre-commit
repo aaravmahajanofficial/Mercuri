@@ -1,0 +1,8 @@
+#!/bin/sh
+branch="$(git rev-parse --abbrev-ref HEAD)"
+
+if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
+  echo "ERROR: Direct commits to $branch branch are not allowed!"
+  echo "Please create a feature branch and use a pull request."
+  exit 1
+fi
