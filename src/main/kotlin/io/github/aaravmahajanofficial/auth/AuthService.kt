@@ -58,7 +58,7 @@ class AuthService(
 
         val hashedPassword = passwordEncoder.encode(requestBody.password)!!
 
-        val user = requestBody.toUser(hashedPassword).also { it.addRole(role) }
+        val user = requestBody.toUser(hashedPassword).apply { addRole(role) }
 
         // Hibernate delays SQL execution until flush/commit.
         // Fields populated by the database (e.g., timestamps, generated IDs)
@@ -88,16 +88,17 @@ class AuthService(
             throw EmailNotVerifiedException()
         }
 
-        val authStatus = AuthStatus.VERIFIED
-        user.lastLoginAt = Instant.now()
-        user.updatedAt = Instant.now()
+        user.apply {
+            lastLoginAt = Instant.now()
+            updatedAt = Instant.now()
+        }
         val updatedUser = userRepository.saveAndFlush(user)
 
         applicationEventPublisher.publishEvent(UserLoginEvent(updatedUser))
 
         return LoginResponseDto(
             accessToken = "accessToken",
-            authStatus = authStatus,
+            authStatus = AuthStatus.VERIFIED,
             user = updatedUser.toUserDto(),
         )
     }
