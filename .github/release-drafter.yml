@@ -66,6 +66,9 @@ autolabeler:
       - '/fix\/.+/'
     title:
       - '/fix/i'
+  - label: 'refactor'
+    branch:
+      - '/refactor\/.+/'
   - label: 'enhancement'
     branch:
       - '/feat\/.+/'
