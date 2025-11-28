@@ -213,7 +213,7 @@ class AuthServiceTest {
         }
 
         @Test
-        fun `should throw AuthenticationException when password mismatch`() {
+        fun `should throw BadCredentialsException when password mismatch`() {
             val request = createLoginRequest()
             val existingUser = createExistingUser()
 
@@ -224,7 +224,7 @@ class AuthServiceTest {
         }
 
         @Test
-        fun `should throw AuthenticationException when user not found`() {
+        fun `should throw BadCredentialsException when user not found`() {
             // Given
             val request = createLoginRequest()
 
