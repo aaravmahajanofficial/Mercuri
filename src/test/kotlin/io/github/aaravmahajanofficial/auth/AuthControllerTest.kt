@@ -22,7 +22,6 @@ import io.github.aaravmahajanofficial.auth.login.UserDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
 import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
-import io.github.aaravmahajanofficial.common.exception.AuthenticationFailedException
 import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
 import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
 import io.github.aaravmahajanofficial.users.RoleType
@@ -44,6 +43,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.http.MediaType.APPLICATION_XML
+import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
@@ -329,7 +329,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
                 password = "wrong-password",
             )
 
-            whenever(authService.login(any())).thenThrow(AuthenticationFailedException())
+            whenever(authService.login(any())).thenThrow(BadCredentialsException("Invalid credentials"))
 
             // When
             val result = mockMvc.post("/api/v1/auth/login") {

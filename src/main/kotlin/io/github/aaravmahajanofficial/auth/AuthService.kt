@@ -25,7 +25,6 @@ import io.github.aaravmahajanofficial.auth.mappers.toUserDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
 import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
-import io.github.aaravmahajanofficial.common.exception.AuthenticationFailedException
 import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
 import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
 import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
@@ -35,6 +34,7 @@ import io.github.aaravmahajanofficial.users.UserRepository
 import io.github.aaravmahajanofficial.users.UserStatus
 import jakarta.transaction.Transactional
 import org.springframework.context.ApplicationEventPublisher
+import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import java.time.Instant
@@ -74,10 +74,11 @@ class AuthService(
 
     @Transactional
     fun login(requestBody: LoginRequestDto): LoginResponseDto {
-        val user = userRepository.findByEmail(requestBody.email) ?: throw AuthenticationFailedException()
+        val user = userRepository.findByEmail(requestBody.email)
+            ?: throw BadCredentialsException("Invalid credentials")
 
         if (!passwordEncoder.matches(requestBody.password, user.passwordHash)) {
-            throw AuthenticationFailedException()
+            throw BadCredentialsException("Invalid credentials")
         }
 
         if (user.status == UserStatus.SUSPENDED) {

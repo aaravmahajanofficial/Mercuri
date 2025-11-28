@@ -20,7 +20,6 @@ import io.github.aaravmahajanofficial.auth.events.UserRegisterEvent
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
-import io.github.aaravmahajanofficial.common.exception.AuthenticationFailedException
 import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
 import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
 import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
@@ -49,6 +48,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.context.ApplicationEventPublisher
+import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
 import java.time.Instant
 import java.util.UUID
@@ -213,24 +213,24 @@ class AuthServiceTest {
         }
 
         @Test
-        fun `should throw AuthenticationFailedException when password mismatch`() {
+        fun `should throw BadCredentialsException when password mismatch`() {
             val request = createLoginRequest()
             val existingUser = createExistingUser()
 
             whenever(userRepository.findByEmail(request.email)).thenReturn(existingUser)
             whenever(passwordEncoder.matches(request.password, existingUser.passwordHash)).thenReturn(false)
 
-            shouldThrow<AuthenticationFailedException> { authService.login(request) }
+            shouldThrow<BadCredentialsException> { authService.login(request) }
         }
 
         @Test
-        fun `should throw AuthenticationFailedException when user not found`() {
+        fun `should throw BadCredentialsException when user not found`() {
             // Given
             val request = createLoginRequest()
 
             whenever(userRepository.findByEmail(request.email)).thenReturn(null)
 
-            shouldThrow<AuthenticationFailedException> { authService.login(request) }
+            shouldThrow<BadCredentialsException> { authService.login(request) }
         }
 
         @Test

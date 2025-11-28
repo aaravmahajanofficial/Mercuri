@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ProblemDetail
 import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.security.core.AuthenticationException
 import org.springframework.web.HttpMediaTypeNotSupportedException
 import org.springframework.web.HttpRequestMethodNotSupportedException
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -143,8 +144,8 @@ class GlobalExceptionHandler {
     }
 
     // 401 Unauthorized
-    @ExceptionHandler(AuthenticationFailedException::class)
-    fun handleAuthenticationFailed(ex: AuthenticationFailedException, request: HttpServletRequest): ProblemDetail {
+    @ExceptionHandler(AuthenticationException::class)
+    fun handleAuthenticationFailed(ex: AuthenticationException, request: HttpServletRequest): ProblemDetail {
         logger.warn(
             "Authentication failed at {}: {}",
             sanitizeLogInput(request.requestURI),
