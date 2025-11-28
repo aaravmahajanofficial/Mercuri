@@ -176,7 +176,7 @@ class GlobalExceptionHandler {
 
     // 403 Forbidden
     @ExceptionHandler(EmailNotVerifiedException::class)
-    fun handleAccountSuspended(ex: EmailNotVerifiedException, request: HttpServletRequest): ProblemDetail {
+    fun handleEmailNotVerified(ex: EmailNotVerifiedException, request: HttpServletRequest): ProblemDetail {
         logger.warn("Login attempt with unverified email at {}: {}", sanitizeLogInput(request.requestURI), ex.message)
         return ProblemDetail.forStatus(HttpStatus.FORBIDDEN).apply {
             type = forbiddenType
