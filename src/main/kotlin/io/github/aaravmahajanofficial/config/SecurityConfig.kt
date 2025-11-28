@@ -31,16 +31,17 @@ class SecurityConfig {
     }
 
     @Bean
-    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder(BCRYPT_STRENGTH)
-
-    @Bean
-    fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
-        http.csrf { it.disable() }.sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+    fun securityFilterChain(httpSecurity: HttpSecurity): SecurityFilterChain {
+        httpSecurity
             .authorizeHttpRequests { auth ->
                 auth.requestMatchers("/api/v1/auth/**").permitAll()
                     .anyRequest().authenticated() // all other endpoints require proper authentication
             }
-
-        return http.build()
+            .csrf { csrfConfig -> csrfConfig.disable() }
+            .sessionManagement { sessionConfig -> sessionConfig.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+        return httpSecurity.build()
     }
+
+    @Bean
+    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder(BCRYPT_STRENGTH)
 }
