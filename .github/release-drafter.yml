@@ -69,6 +69,9 @@ autolabeler:
   - label: 'refactor'
     branch:
       - '/refactor\/.+/'
+  - label: 'tests'
+    branch:
+      - '/test\/.+/'
   - label: 'enhancement'
     branch:
       - '/feat\/.+/'
