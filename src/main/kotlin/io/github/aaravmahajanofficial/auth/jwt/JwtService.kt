@@ -26,11 +26,13 @@ import io.jsonwebtoken.MalformedJwtException
 import io.jsonwebtoken.security.Keys
 import io.jsonwebtoken.security.SignatureException
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
 import java.util.Base64
 import java.util.Date
 import java.util.UUID
 import javax.crypto.SecretKey
 
+@Service
 class JwtService(private val jwtProperties: JwtProperties) {
 
     private val logger = LoggerFactory.getLogger(JwtService::class.java)
@@ -125,6 +127,7 @@ class JwtService(private val jwtProperties: JwtProperties) {
     }
 
     private fun extractRolesFromClaims(claims: Claims): Set<RoleType> {
+        @Suppress("UNCHECKED_CAST")
         val rolesList = claims[CLAIMS_ROLES] as? List<String> ?: emptyList()
         return rolesList.mapNotNull { roleName ->
             try {
@@ -136,7 +139,7 @@ class JwtService(private val jwtProperties: JwtProperties) {
         }.toSet()
     }
 
-    fun refreshAccessToken(refreshToken: String): String {
+    fun refreshAccessToken(refreshToken: String, currentRoles: Set<RoleType>): String {
         val validationResult = validateToken(refreshToken, TokenType.REFRESH)
 
         if (!validationResult.isValid) {
@@ -146,7 +149,7 @@ class JwtService(private val jwtProperties: JwtProperties) {
         val tokenRequest = TokenRequest(
             userID = validationResult.userID!!,
             email = validationResult.email!!,
-            roles = validationResult.roles!!,
+            roles = currentRoles,
         )
 
         return generateAccessToken(tokenRequest)

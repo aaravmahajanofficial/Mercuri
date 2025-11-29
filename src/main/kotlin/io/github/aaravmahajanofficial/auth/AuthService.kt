@@ -17,6 +17,8 @@ package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.auth.events.UserLoginEvent
 import io.github.aaravmahajanofficial.auth.events.UserRegisterEvent
+import io.github.aaravmahajanofficial.auth.jwt.JwtService
+import io.github.aaravmahajanofficial.auth.jwt.TokenRequest
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.login.LoginResponseDto
 import io.github.aaravmahajanofficial.auth.mappers.toRegisterResponse
@@ -45,6 +47,7 @@ class AuthService(
     private val passwordEncoder: PasswordEncoder,
     private val roleRepository: RoleRepository,
     private val applicationEventPublisher: ApplicationEventPublisher,
+    private val jwtService: JwtService,
 ) {
 
     @Transactional
@@ -97,8 +100,20 @@ class AuthService(
 
         applicationEventPublisher.publishEvent(UserLoginEvent(updatedUser))
 
+        // Generate JWT Tokens
+        val tokenRequest = TokenRequest(
+            userID = updatedUser.id!!,
+            email = updatedUser.email,
+            roles = updatedUser.roles.map { it.name }.toSet(),
+        )
+
+        val tokenPair = jwtService.generateTokenPair(tokenRequest)
+
         return LoginResponseDto(
-            accessToken = "accessToken",
+            accessToken = tokenPair.accessToken,
+            refreshToken = tokenPair.refreshToken,
+            tokenType = tokenPair.tokenType,
+            expiresIn = tokenPair.expiresIn,
             authStatus = AuthStatus.VERIFIED,
             user = updatedUser.toUserDto(),
         )

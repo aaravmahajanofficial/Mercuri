@@ -85,6 +85,7 @@ class JwtServiceTest {
             claims["email"] shouldBe email
             claims["type"] shouldBe TokenType.ACCESS.name
 
+            @Suppress("UNCHECKED_CAST")
             val extractedRoles = claims["roles"] as List<String>
             extractedRoles shouldContainExactlyInAnyOrder roles.map { it.value }
         }
@@ -327,7 +328,7 @@ class JwtServiceTest {
             val refreshToken = jwtService.generateRefreshToken(request)
 
             // When
-            val newAccessToken = jwtService.refreshAccessToken(refreshToken)
+            val newAccessToken = jwtService.refreshAccessToken(refreshToken, request.roles)
 
             // Then
             newAccessToken.shouldNotBeEmpty()
@@ -354,7 +355,7 @@ class JwtServiceTest {
 
             // When & Then
             shouldThrow<InvalidTokenException> {
-                shortJwtService.refreshAccessToken(refreshToken)
+                shortJwtService.refreshAccessToken(refreshToken, request.roles)
             }
         }
 
@@ -366,7 +367,7 @@ class JwtServiceTest {
 
             // When & Then
             shouldThrow<InvalidTokenException> {
-                jwtService.refreshAccessToken(accessToken)
+                jwtService.refreshAccessToken(accessToken, request.roles)
             }
         }
     }

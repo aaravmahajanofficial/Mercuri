@@ -39,7 +39,14 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import java.time.Instant
 
 @Import(TestcontainersConfiguration::class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = [
+        "JWT_SECRET_BASE64=" +
+            "Y2Y4M2UxMzU3ZWVmYjhiZGYxNTQyODUwZDY2ZDgwMDdkNjIwZTQwNTBiNTcxNWRjODNmNGE5MjFkMzZjZTljZTQ3ZDBkMTNjNWQ4" +
+            "NWYyYjBmZjgzMThkMjg3N2VlYzJmNjNiOTMxYmQ0NzQxN2E4MWE1MzgzMjdhZjkyN2RhM2U=",
+    ],
+)
 @AutoConfigureWebTestClient
 class LoginIntegrationTests @Autowired constructor(
     val webTestClient: WebTestClient,
