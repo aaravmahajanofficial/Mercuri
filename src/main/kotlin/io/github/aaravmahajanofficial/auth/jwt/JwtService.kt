@@ -71,6 +71,7 @@ class JwtService(private val jwtProperties: JwtProperties) {
         return Jwts.builder()
             .id(UUID.randomUUID().toString())
             .subject(request.userID.toString())
+            .claim(CLAIMS_EMAIL, request.email)
             .claim(CLAIMS_TYPE, TokenType.REFRESH.name)
             .issuedAt(now)
             .expiration(expiration)
@@ -84,13 +85,11 @@ class JwtService(private val jwtProperties: JwtProperties) {
         expiresIn = jwtProperties.accessTokenExpiration / 1000,
     )
 
-    fun validateToken(accessToken: String, expectedType: TokenType): TokenValidationResult = try {
-        val claims = extractAllClaims(accessToken)
+    fun validateToken(token: String, expectedType: TokenType): TokenValidationResult = try {
+        val claims = extractAllClaims(token)
         val actualType = claims[CLAIMS_TYPE] as? String
 
         when {
-            claims.expiration.before(Date()) -> TokenValidationResult.invalid(TokenValidationError.EXPIRED)
-
             actualType != expectedType.name -> {
                 logger.debug("Token type mismatch: expected {}, actual {}", expectedType, actualType)
                 TokenValidationResult.invalid(TokenValidationError.WRONG_TOKEN_TYPE)
@@ -103,18 +102,18 @@ class JwtService(private val jwtProperties: JwtProperties) {
             )
         }
     } catch (e: InvalidTokenException) {
-        TokenValidationResult.invalid(e.error!!)
+        TokenValidationResult.invalid(e.error ?: TokenValidationError.MALFORMED)
     }
 
-    fun extractAllClaims(accessToken: String): Claims = try {
+    fun extractAllClaims(token: String): Claims = try {
         Jwts.parser()
             .verifyWith(secretKey)
             .build()
-            .parseSignedClaims(accessToken)
+            .parseSignedClaims(token)
             .payload
     } catch (e: ExpiredJwtException) {
         logger.debug("Token expired: {}", e.message)
-        e.claims
+        throw InvalidTokenException("Token Expired", TokenValidationError.EXPIRED, e)
     } catch (e: SignatureException) {
         logger.debug("Token signature is invalid: {}", e.message)
         throw InvalidTokenException("Invalid signature", TokenValidationError.INVALID_SIGNATURE, e)
@@ -130,9 +129,7 @@ class JwtService(private val jwtProperties: JwtProperties) {
         @Suppress("UNCHECKED_CAST")
         val rolesList = claims[CLAIMS_ROLES] as? List<String> ?: emptyList()
         return rolesList.mapNotNull { roleName ->
-            try {
-                RoleType.entries.find { it.value == roleName }
-            } catch (_: IllegalArgumentException) {
+            RoleType.entries.find { it.value == roleName } ?: run {
                 logger.warn("Unknown role in token: {}", roleName)
                 null
             }

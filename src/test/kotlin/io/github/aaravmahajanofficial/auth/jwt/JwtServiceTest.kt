@@ -336,6 +336,8 @@ class JwtServiceTest {
             val result = jwtService.validateToken(newAccessToken, TokenType.ACCESS)
             result.isValid shouldBe true
             result.userID shouldBe request.userID
+            result.email shouldBe request.email
+            result.roles shouldContainExactlyInAnyOrder request.roles
         }
 
         @Test

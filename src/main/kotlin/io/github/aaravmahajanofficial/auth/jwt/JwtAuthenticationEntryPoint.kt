@@ -15,6 +15,7 @@
  */
 package io.github.aaravmahajanofficial.auth.jwt
 
+import io.github.aaravmahajanofficial.common.LogSanitizer.sanitizeLogInput
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.LoggerFactory
@@ -32,7 +33,7 @@ class JwtAuthenticationEntryPoint(private val objectMapper: ObjectMapper) : Auth
 
     // Send a clean JSON 401 response instead of redirecting
 
-    private val logger = LoggerFactory.getLogger(JwtAuthenticationFilter::class.java)
+    private val logger = LoggerFactory.getLogger(JwtAuthenticationEntryPoint::class.java)
 
     companion object {
         private val UNAUTHORIZED_TYPE = URI.create("https://api.example.com/problems/unauthorized")
@@ -43,7 +44,7 @@ class JwtAuthenticationEntryPoint(private val objectMapper: ObjectMapper) : Auth
         response: HttpServletResponse,
         authException: AuthenticationException,
     ) {
-        logger.debug("Unauthorized request: {} to {}", request.requestURI, authException.message)
+        logger.debug("Unauthorized request: {} to {}", sanitizeLogInput(request.requestURI), authException.message)
 
         val problemDetail = ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED).apply {
             type = UNAUTHORIZED_TYPE

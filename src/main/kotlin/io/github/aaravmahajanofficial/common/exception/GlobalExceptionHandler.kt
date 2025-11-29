@@ -41,7 +41,7 @@ class GlobalExceptionHandler {
         private val INTERNAL_TYPE = URI.create("https://api.example.com/problems/internal-server-error")
         private val UNAUTHORIZED_TYPE = URI.create("https://api.example.com/problems/unauthorized")
         private val FORBIDDEN_TYPE = URI.create("https://api.example.com/problems/forbidden")
-        private val INVALID_TOKEN = URI.create("https://api.example.com/problems/invalid-token")
+        private val INVALID_TOKEN_TYPE = URI.create("https://api.example.com/problems/invalid-token")
     }
 
     private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
@@ -167,7 +167,7 @@ class GlobalExceptionHandler {
         logger.debug("Invalid Token at {}: {}", sanitizeLogInput(request.requestURI), ex.message)
 
         return ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED).apply {
-            type = INVALID_TOKEN
+            type = INVALID_TOKEN_TYPE
             title = "Invalid Token"
             detail = "The provided token is invalid or has expired."
             instance = URI.create(request.requestURI)

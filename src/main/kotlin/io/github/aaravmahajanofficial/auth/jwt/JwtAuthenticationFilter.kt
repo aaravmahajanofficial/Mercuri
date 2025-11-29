@@ -15,17 +15,18 @@
  */
 package io.github.aaravmahajanofficial.auth.jwt
 
+import io.github.aaravmahajanofficial.common.LogSanitizer.sanitizeLogInput
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.LoggerFactory
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.AuthenticationException
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
-import javax.naming.AuthenticationException
 
 @Component
 class JwtAuthenticationFilter(private val jwtService: JwtService) : OncePerRequestFilter() {
@@ -60,7 +61,11 @@ class JwtAuthenticationFilter(private val jwtService: JwtService) : OncePerReque
             if (validationResult.isValid) {
                 setAuthentication(request, validationResult)
             } else {
-                log.debug("Token validation failed for request {}: {}", request.requestURI, validationResult.error)
+                log.debug(
+                    "Token validation failed for request {}: {}",
+                    sanitizeLogInput(request.requestURI),
+                    validationResult.error,
+                )
             }
         } catch (e: AuthenticationException) {
             log.error("Error processing JWT authentication", e)
