@@ -28,7 +28,6 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -43,7 +42,7 @@ import org.springframework.test.web.reactive.server.WebTestClient
 @Import(TestcontainersConfiguration::class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
-class AuthIntegrationTests @Autowired constructor(
+class RegisterIntegrationTests @Autowired constructor(
     val webTestClient: WebTestClient,
     val roleRepository: RoleRepository,
     val userRepository: UserRepository,
@@ -51,14 +50,8 @@ class AuthIntegrationTests @Autowired constructor(
 ) {
     @BeforeEach
     fun setup() {
-        if (roleRepository.findByName(RoleType.CUSTOMER) == null) {
-            roleRepository.save(Role(name = RoleType.CUSTOMER))
-        }
-    }
-
-    @AfterEach
-    fun tearDown() {
         userRepository.deleteAll()
+        roleRepository.saveAndFlush(Role(name = RoleType.CUSTOMER))
     }
 
     @Test
