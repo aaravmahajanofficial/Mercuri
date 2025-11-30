@@ -309,6 +309,7 @@ class AuthControllerTest : ProblemResponseAssertions() {
 
                 jsonPath("$.data.authStatus") { value(serviceResponse.authStatus.value) }
                 jsonPath("$.data.accessToken") { value("mock.jwt.token") }
+                jsonPath("$.data.refreshToken") { value("mock.jwt.token") }
                 jsonPath("$.data.tokenType") { value("Bearer") }
                 jsonPath("$.data.expiresIn") { value(3600) }
 

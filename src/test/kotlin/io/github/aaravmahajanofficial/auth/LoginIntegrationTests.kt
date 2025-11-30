@@ -52,6 +52,7 @@ class LoginIntegrationTests @Autowired constructor(
     fun setup() {
         roleRepository.deleteAll()
         userRepository.deleteAll()
+
         roleRepository.saveAndFlush(Role(name = RoleType.CUSTOMER))
     }
 
@@ -74,10 +75,11 @@ class LoginIntegrationTests @Autowired constructor(
         )
     }
 
-    private fun loginRequest() = LoginRequestDto(
-        email = "valid.user@example.com",
-        password = "StrongP@ss1",
-    )
+    private fun loginRequest(email: String = "valid.user@example.com", password: String = "StrongP@ss1") =
+        LoginRequestDto(
+            email = email,
+            password = password,
+        )
 
     @Test
     fun `should return 200 OK when login successful with valid email`() {
@@ -85,18 +87,26 @@ class LoginIntegrationTests @Autowired constructor(
         createUser()
 
         // When
-        webTestClient.post().uri("/api/v1/auth/login")
+        val result = webTestClient.post().uri("/api/v1/auth/login")
             .contentType(APPLICATION_JSON)
             .bodyValue(loginRequest())
-            .exchange().expectStatus().isEqualTo(HttpStatus.OK)
+            .exchange()
+
+        result.expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.data.accessToken").isNotEmpty
+            .jsonPath("$.data.refreshToken").isNotEmpty
+            .jsonPath("$.data.tokenType").isEqualTo("Bearer")
+            .jsonPath("$.data.expiresIn").isNumber
+            .jsonPath("$.data.authStatus").isEqualTo(AuthStatus.VERIFIED.value)
 
         // Then - DB State
-        val attemptedUser = userRepository.findByEmail(loginRequest().email)
-        attemptedUser?.lastLoginAt.shouldNotBeNull() // DB should be updated with login timestamp
+        // DB should be updated with login timestamp
+        userRepository.findByEmail(loginRequest().email)?.lastLoginAt.shouldNotBeNull()
     }
 
     @Test
-    fun `should fail with 401 on login with incorrect password`() {
+    fun `should return 401 on incorrect password`() {
         // Given
         val wrongRequest = loginRequest().copy(password = "wrong-password")
 
@@ -104,15 +114,14 @@ class LoginIntegrationTests @Autowired constructor(
         webTestClient.post().uri("/api/v1/auth/login")
             .contentType(APPLICATION_JSON)
             .bodyValue(wrongRequest)
-            .exchange().expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED)
+            .exchange().expectStatus().isUnauthorized
 
         // Then
-        val attemptedUser = userRepository.findByEmail(wrongRequest.email)
-        attemptedUser?.lastLoginAt.shouldBeNull()
+        userRepository.findByEmail(wrongRequest.email)?.lastLoginAt.shouldBeNull()
     }
 
     @Test
-    fun `should fail with 401 on login with non-existent user`() {
+    fun `should return 401 when user does not exist`() {
         // Given
         val wrongRequest = loginRequest().copy(email = "doesNotExist@example.com")
 
@@ -123,8 +132,8 @@ class LoginIntegrationTests @Autowired constructor(
             .exchange().expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED)
 
         // Then
-        val attemptedUser = userRepository.findByEmail(wrongRequest.email)
-        attemptedUser.shouldBeNull() // A user should not be created upon failed login attempt
+        // A user should not be created upon failed login attempt
+        userRepository.findByEmail(wrongRequest.email).shouldBeNull()
     }
 
     @Test
@@ -139,12 +148,11 @@ class LoginIntegrationTests @Autowired constructor(
             .exchange().expectStatus().isEqualTo(HttpStatus.FORBIDDEN)
 
         // Then
-        val attemptedUser = userRepository.findByEmail(loginRequest().email)
-        attemptedUser?.lastLoginAt.shouldBeNull()
+        userRepository.findByEmail(loginRequest().email)?.lastLoginAt.shouldBeNull()
     }
 
     @Test
-    fun `should fail with 403 when user hasn't verified the email`() {
+    fun `should fail with 403 when email is not verified`() {
         // Given
         createUser(emailVerified = false)
 
@@ -152,10 +160,28 @@ class LoginIntegrationTests @Autowired constructor(
         webTestClient.post().uri("/api/v1/auth/login")
             .contentType(APPLICATION_JSON)
             .bodyValue(loginRequest())
-            .exchange().expectStatus().isEqualTo(HttpStatus.FORBIDDEN)
+            .exchange().expectStatus().isForbidden
 
         // Then
-        val attemptedUser = userRepository.findByEmail(loginRequest().email)
-        attemptedUser?.lastLoginAt.shouldBeNull()
+        userRepository.findByEmail(loginRequest().email)?.lastLoginAt.shouldBeNull()
+    }
+
+    @Test
+    fun `should return 422 for invalid login input`() {
+        // Given
+        val request = loginRequest(
+            email = "not-valid",
+            password = "",
+        )
+
+        // When
+        webTestClient.post().uri("/api/v1/auth/login")
+            .contentType(APPLICATION_JSON)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT)
+
+        // Then
+        userRepository.findByEmail(loginRequest().email)?.lastLoginAt.shouldBeNull()
     }
 }
