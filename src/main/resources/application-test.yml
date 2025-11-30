@@ -1,0 +1,4 @@
+jwt:
+  secret-key: "Y2Y4M2UxMzU3ZWVmYjhiZGYxNTQyODUwZDY2ZDgwMDdkNjIwZTQwNTBiNTcxNWRjODNmNGE5MjFkMzZjZTljZTQ3ZDBkMTNjNWQ4NWYyYjBmZjgzMThkMjg3N2VlYzJmNjNiOTMxYmQ0NzQxN2E4MWE1MzgzMjdhZjkyN2RhM2U="
+  access-token-expiration: 900000
+  refresh-token-expiration: 604800000
