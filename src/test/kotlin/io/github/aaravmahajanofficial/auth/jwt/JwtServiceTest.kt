@@ -133,8 +133,8 @@ class JwtServiceTest {
             val request = createTokenRequest()
 
             // When
-            val accessToken = jwtService.generateRefreshToken(request)
-            val claims = jwtService.extractAllClaims(accessToken)
+            val refreshToken = jwtService.generateRefreshToken(request)
+            val claims = jwtService.extractAllClaims(refreshToken)
             val expiration = claims.expiration.time
             val issuedAt = claims.issuedAt.time
 

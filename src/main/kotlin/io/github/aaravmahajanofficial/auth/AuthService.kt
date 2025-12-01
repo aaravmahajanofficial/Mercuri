@@ -102,7 +102,7 @@ class AuthService(
 
         // Generate JWT Tokens
         val tokenRequest = TokenRequest(
-            userID = updatedUser.id!!,
+            userID = updatedUser.id ?: error("User ID not set after persistence"),
             email = updatedUser.email,
             roles = updatedUser.roles.map { it.name }.toSet(),
         )

@@ -67,8 +67,25 @@ class JwtAuthenticationFilter(private val jwtService: JwtService) : OncePerReque
                     validationResult.error,
                 )
             }
-        } catch (e: AuthenticationException) {
-            log.error("Error processing JWT authentication", e)
+        } catch (e: Exception) {
+            SecurityContextHolder.clearContext()
+
+            if (e is AuthenticationException) {
+                log.error(
+                    "Authentication error processing JWT for request:{} {}",
+                    sanitizeLogInput(request.requestURI),
+                    e.message,
+                )
+            } else {
+                log.error(
+                    "Unexpected error processing JWT authentication for request ${
+                        sanitizeLogInput(
+                            request.requestURI,
+                        )
+                    }",
+                    e,
+                )
+            }
         }
 
         filterChain.doFilter(request, response)
