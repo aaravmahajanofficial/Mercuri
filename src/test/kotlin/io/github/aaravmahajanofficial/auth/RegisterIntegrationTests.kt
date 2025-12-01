@@ -51,6 +51,8 @@ class RegisterIntegrationTests @Autowired constructor(
     @BeforeEach
     fun setup() {
         userRepository.deleteAll()
+        roleRepository.deleteAll()
+
         roleRepository.saveAndFlush(Role(name = RoleType.CUSTOMER))
     }
 
@@ -72,7 +74,7 @@ class RegisterIntegrationTests @Autowired constructor(
             .exchange()
 
         // Then
-        result.expectStatus().isEqualTo(HttpStatus.CREATED)
+        result.expectStatus().isCreated
             .expectHeader().contentType(MediaType.APPLICATION_JSON)
             .expectBody()
             .jsonPath("$.data.id").isNotEmpty
@@ -92,16 +94,17 @@ class RegisterIntegrationTests @Autowired constructor(
     }
 
     @Test
-    fun `should return 409 if email already exists`() { // tests unique email constraint and domain handling
+    fun `should return 409 on duplicate email`() { // tests unique email constraint and domain handling
         // Given
-        val existingUser = User(
-            email = "john.doe@example.com",
-            passwordHash = "hashed_password",
-            firstName = "Johnny",
-            lastName = "Doe",
-            phoneNumber = "+1111111111",
+        userRepository.saveAndFlush(
+            User(
+                email = "john.doe@example.com",
+                passwordHash = "hashed_password",
+                firstName = "Johnny",
+                lastName = "Doe",
+                phoneNumber = "+1111111111",
+            ),
         )
-        userRepository.saveAndFlush(existingUser)
 
         // Try to register with same email
         val registerRequest = RegisterRequestDto(
@@ -139,7 +142,6 @@ class RegisterIntegrationTests @Autowired constructor(
             .exchange().expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT)
 
         // Then - DB State
-        val user = userRepository.findByEmail(registerRequest.email)
-        user.shouldBeNull() // User should not exist in DB
+        userRepository.findByEmail(registerRequest.email).shouldBeNull() // User should not exist in DB
     }
 }
