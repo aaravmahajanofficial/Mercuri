@@ -15,7 +15,20 @@
  */
 package io.github.aaravmahajanofficial.config
 
+import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.NotBlank
 import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.validation.annotation.Validated
 
 @ConfigurationProperties(prefix = "jwt")
-data class JwtProperties(val secretKey: String, val accessTokenExpiration: Long, val refreshTokenExpiration: Long)
+@Validated
+data class JwtProperties(
+    @field:NotBlank(message = "JWT secret key must be configured")
+    val secretKey: String,
+
+    @field:Min(value = 60000, message = "Access token expiration must be at least 60 seconds (60000ms)")
+    val accessTokenExpiration: Long = 900_000L,
+
+    @field:Min(value = 3600000, message = "Refresh token expiration must be at least 1 hour (3600000ms)")
+    val refreshTokenExpiration: Long = 604_800_000L,
+)
