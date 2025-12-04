@@ -18,6 +18,10 @@ package io.github.aaravmahajanofficial.auth.jwt
 import io.github.aaravmahajanofficial.common.exception.InvalidTokenException
 import io.github.aaravmahajanofficial.config.JwtProperties
 import io.github.aaravmahajanofficial.users.RoleType
+import io.jsonwebtoken.Jwts
+import io.jsonwebtoken.io.Decoders
+import io.jsonwebtoken.io.Encoders
+import io.jsonwebtoken.security.Keys
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
@@ -26,34 +30,37 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import java.util.Base64
 import java.util.UUID
-import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
 
 class JwtServiceTest {
 
-    lateinit var jwtProperties: JwtProperties
-    lateinit var jwtService: JwtService
+    private lateinit var jwtProperties: JwtProperties
+    private lateinit var jwtService: JwtService
+    private lateinit var secretKey: SecretKey
 
     companion object {
         private const val ACCESS_TOKEN_EXPIRATION = 900_000L
         private const val REFRESH_TOKEN_EXPIRATION = 604_800_000L
 
-        private fun generateSecretKey(): String {
-            val keyGenerator = KeyGenerator.getInstance("HmacSHA512")
-            keyGenerator.init(512)
-            return Base64.getEncoder().encodeToString(keyGenerator.generateKey().encoded)
+        private val TEST_SECRET_KEY: String by lazy {
+            val key = Jwts.SIG.HS512.key().build()
+            Encoders.BASE64URL.encode(key.encoded)
         }
     }
 
     @BeforeEach
     fun setUp() {
         jwtProperties = JwtProperties(
-            secretKey = generateSecretKey(),
+            secretKey = TEST_SECRET_KEY,
             accessTokenExpiration = ACCESS_TOKEN_EXPIRATION,
             refreshTokenExpiration = REFRESH_TOKEN_EXPIRATION,
         )
-        jwtService = JwtService(jwtProperties)
+
+        val keyBytes = Decoders.BASE64URL.decode(TEST_SECRET_KEY)
+        secretKey = Keys.hmacShaKeyFor(keyBytes)
+
+        jwtService = JwtService(jwtProperties, secretKey)
     }
 
     private fun createTokenRequest(
@@ -182,11 +189,11 @@ class JwtServiceTest {
             // Given
             val shortLivedProperties = JwtProperties(
                 secretKey = jwtProperties.secretKey,
-                accessTokenExpiration = 1, // 1 ms
-                refreshTokenExpiration = 1,
+                accessTokenExpiration = -1000L,
+                refreshTokenExpiration = -1000L,
             )
 
-            val shortJwtService = JwtService(shortLivedProperties)
+            val shortJwtService = JwtService(shortLivedProperties, secretKey)
             val request = createTokenRequest()
 
             val accessToken = shortJwtService.generateAccessToken(request)
@@ -263,13 +270,17 @@ class JwtServiceTest {
         @Test
         fun `should reject token signed with different key`() {
             // Given
+            // Generate a secret key
+            val key = Jwts.SIG.HS512.key().build()
+            val keyBase64 = Encoders.BASE64URL.encode(key.encoded)
+
             val differentKeyProperties = JwtProperties(
-                secretKey = generateSecretKey(),
+                secretKey = keyBase64,
                 refreshTokenExpiration = REFRESH_TOKEN_EXPIRATION,
                 accessTokenExpiration = ACCESS_TOKEN_EXPIRATION,
             )
 
-            val differentKeyService = JwtService(differentKeyProperties)
+            val differentKeyService = JwtService(differentKeyProperties, key)
             val request = createTokenRequest()
             val accessToken = differentKeyService.generateAccessToken(request)
 
@@ -344,12 +355,12 @@ class JwtServiceTest {
         fun `should throw exception when refreshing with expired token`() {
             // Given
             val shortLivedProperties = JwtProperties(
-                secretKey = generateSecretKey(),
+                secretKey = TEST_SECRET_KEY,
                 accessTokenExpiration = ACCESS_TOKEN_EXPIRATION,
                 refreshTokenExpiration = 1,
             )
 
-            val shortJwtService = JwtService(shortLivedProperties)
+            val shortJwtService = JwtService(shortLivedProperties, secretKey)
             val request = createTokenRequest()
             val refreshToken = shortJwtService.generateRefreshToken(request)
 

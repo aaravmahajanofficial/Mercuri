@@ -21,7 +21,6 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.LoggerFactory
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
-import org.springframework.security.core.AuthenticationException
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource
@@ -44,42 +43,36 @@ class JwtAuthenticationFilter(private val jwtService: JwtService) : OncePerReque
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
-        try { // Skip if already authenticated
-            if (SecurityContextHolder.getContext().authentication != null) {
-                filterChain.doFilter(request, response)
-                return
-            }
-
-            val token = extractToken(request)
-            if (token == null) {
-                filterChain.doFilter(request, response)
-                return
-            }
-
-            val validationResult = jwtService.validateToken(token, TokenType.ACCESS)
-
-            if (validationResult.isValid) {
-                setAuthentication(request, validationResult)
-            } else {
-                log.debug(
-                    "Token validation failed for request {}: {}",
-                    sanitizeLogInput(request.requestURI),
-                    validationResult.error,
-                )
-            }
-        } catch (e: Exception) {
-            SecurityContextHolder.clearContext()
-            log.error(
-                "Unexpected error processing JWT authentication for request ${sanitizeLogInput(request.requestURI)}",
-                e,
-            )
-        } catch (e: AuthenticationException) {
-            log.error(
-                "Authentication error processing JWT for request:{} {}",
-                sanitizeLogInput(request.requestURI),
-                e.message,
-            )
+        // Skip if already authenticated
+        if (SecurityContextHolder.getContext().authentication != null) {
+            filterChain.doFilter(request, response)
+            return
         }
+
+        val token = extractToken(request)
+
+        // No token -> treat as anonymous
+        if (token == null) {
+            filterChain.doFilter(request, response)
+            return
+        }
+
+        val validationResult = jwtService.validateToken(token, TokenType.ACCESS)
+
+        if (!validationResult.isValid) {
+            log.debug(
+                "Token validation failed for request {}: {}",
+                sanitizeLogInput(request.requestURI),
+                validationResult.error,
+            )
+
+            // Don't set authentication -> user remains anonymous
+            filterChain.doFilter(request, response)
+            return
+        }
+
+        // Token is valid -> build Authentication and set in Security Context
+        setAuthentication(request, validationResult)
 
         filterChain.doFilter(request, response)
     }
@@ -97,7 +90,7 @@ class JwtAuthenticationFilter(private val jwtService: JwtService) : OncePerReque
 
     // Build the Spring Authentication Object
     private fun setAuthentication(request: HttpServletRequest, validationResult: TokenValidationResult) {
-        // User object Spring stores in the Security Context
+        // User object that Spring stores in the Security Context
         val principal = JwtAuthenticationPrincipal(
             userID = validationResult.userID!!,
             email = validationResult.email!!,
@@ -118,9 +111,12 @@ class JwtAuthenticationFilter(private val jwtService: JwtService) : OncePerReque
 
         // This would let Spring Security treat the user as authenticated
         SecurityContextHolder.getContext().authentication = authentication
-
         request.setAttribute(USER_ID_ATTRIBUTE, validationResult.userID)
 
-        log.debug("Successfully authenticated user: {}", validationResult.email)
+        log.debug(
+            "Successfully authenticated user {} for request {}",
+            sanitizeLogInput(validationResult.email),
+            sanitizeLogInput(request.requestURI),
+        )
     }
 }

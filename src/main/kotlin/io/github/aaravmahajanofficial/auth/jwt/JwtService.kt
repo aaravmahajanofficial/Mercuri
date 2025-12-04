@@ -23,24 +23,17 @@ import io.jsonwebtoken.ExpiredJwtException
 import io.jsonwebtoken.JwtException
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.MalformedJwtException
-import io.jsonwebtoken.security.Keys
 import io.jsonwebtoken.security.SignatureException
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.util.Base64
 import java.util.Date
 import java.util.UUID
 import javax.crypto.SecretKey
 
 @Service
-class JwtService(private val jwtProperties: JwtProperties) {
+class JwtService(private val jwtProperties: JwtProperties, private val secretKey: SecretKey) {
 
     private val logger = LoggerFactory.getLogger(JwtService::class.java)
-
-    private val secretKey: SecretKey by lazy {
-        val decodedKey = Base64.getDecoder().decode(jwtProperties.secretKey)
-        Keys.hmacShaKeyFor(decodedKey)
-    }
 
     companion object {
         private const val CLAIMS_EMAIL = "email"

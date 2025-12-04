@@ -13,18 +13,11 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial
+package io.github.aaravmahajanofficial.auth
 
-import org.junit.jupiter.api.Test
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.context.annotation.Import
-import org.springframework.test.context.ActiveProfiles
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 
-@SpringBootTest
-@ActiveProfiles("test")
-@Import(TestcontainersConfiguration::class)
-class ApplicationTests {
-    @Test
-    fun contextLoads() {
-    }
-}
+@Retention(AnnotationRetention.RUNTIME)
+@MustBeDocumented
+@AuthenticationPrincipal
+annotation class CurrentUser

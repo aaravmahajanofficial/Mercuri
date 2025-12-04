@@ -49,12 +49,13 @@ class JwtAuthenticationEntryPoint(private val objectMapper: ObjectMapper) : Auth
         val problemDetail = ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED).apply {
             type = UNAUTHORIZED_TYPE
             title = "Unauthorized"
-            detail = "Authentication is required to access this resource."
+            detail = "Missing or invalid authorization token."
             instance = URI.create(request.requestURI)
         }
 
         response.status = HttpStatus.UNAUTHORIZED.value()
         response.contentType = APPLICATION_PROBLEM_JSON_VALUE
-        response.writer.write(objectMapper.writeValueAsString(problemDetail))
+
+        objectMapper.writeValue(response.writer, problemDetail)
     }
 }

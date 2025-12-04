@@ -17,6 +17,7 @@ package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.auth.events.UserLoginEvent
 import io.github.aaravmahajanofficial.auth.events.UserRegisterEvent
+import io.github.aaravmahajanofficial.auth.jwt.JwtAuthenticationPrincipal
 import io.github.aaravmahajanofficial.auth.jwt.JwtService
 import io.github.aaravmahajanofficial.auth.jwt.TokenRequest
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
@@ -118,4 +119,6 @@ class AuthService(
             user = updatedUser.toUserDto(),
         )
     }
+
+    fun logout(principal: JwtAuthenticationPrincipal) {}
 }
