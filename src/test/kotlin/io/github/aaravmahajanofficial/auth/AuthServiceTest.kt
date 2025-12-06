@@ -17,6 +17,8 @@ package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.auth.events.UserLoginEvent
 import io.github.aaravmahajanofficial.auth.events.UserRegisterEvent
+import io.github.aaravmahajanofficial.auth.jwt.JwtService
+import io.github.aaravmahajanofficial.auth.jwt.TokenPair
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
@@ -69,6 +71,9 @@ class AuthServiceTest {
     @Mock
     lateinit var eventPublisher: ApplicationEventPublisher
 
+    @Mock
+    lateinit var jwtService: JwtService
+
     @InjectMocks
     lateinit var authService: AuthService
 
@@ -102,6 +107,9 @@ class AuthServiceTest {
         id = UUID.randomUUID()
         addRole(createCustomerRole())
     }
+
+    private fun createTokenPair() =
+        TokenPair(accessToken = "mock.access.token", refreshToken = "mock.refresh.token", expiresIn = 900)
 
     @Nested
     inner class Registration {
@@ -191,6 +199,9 @@ class AuthServiceTest {
             }
             whenever(userRepository.saveAndFlush(any())).thenReturn(updatedUser)
 
+            val tokenPair = createTokenPair()
+            whenever(jwtService.generateTokenPair(any())).thenReturn(tokenPair)
+
             // When
             val result = authService.login(request)
 
@@ -208,6 +219,19 @@ class AuthServiceTest {
             verify(eventPublisher).publishEvent(eventCaptor.capture())
             eventCaptor.firstValue.user.email shouldBe request.email
 
+            // Then - Verify token request correctness
+            verify(jwtService).generateTokenPair(
+                check {
+                    it.userID shouldBe updatedUser.id
+                    it.email shouldBe updatedUser.email
+                    it.roles shouldBe updatedUser.roles.map { it.name }.toSet()
+                },
+            )
+
+            result.accessToken shouldBe tokenPair.accessToken
+            result.refreshToken shouldBe tokenPair.refreshToken
+            result.expiresIn shouldBe tokenPair.expiresIn
+            result.tokenType shouldBe tokenPair.tokenType
             result.authStatus shouldBe AuthStatus.VERIFIED
             result.user.lastLoginAt shouldBe updatedUser.lastLoginAt
         }

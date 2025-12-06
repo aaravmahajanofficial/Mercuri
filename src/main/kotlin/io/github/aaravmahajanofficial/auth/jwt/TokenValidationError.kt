@@ -13,18 +13,12 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial
+package io.github.aaravmahajanofficial.auth.jwt
 
-import org.junit.jupiter.api.Test
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.context.annotation.Import
-import org.springframework.test.context.ActiveProfiles
-
-@SpringBootTest
-@ActiveProfiles("test")
-@Import(TestcontainersConfiguration::class)
-class ApplicationTests {
-    @Test
-    fun contextLoads() {
-    }
+enum class TokenValidationError {
+    EXPIRED,
+    MALFORMED,
+    INVALID_SIGNATURE,
+    WRONG_TOKEN_TYPE,
+    MISSING_CLAIMS,
 }

@@ -13,18 +13,9 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial
+package io.github.aaravmahajanofficial.common.exception
 
-import org.junit.jupiter.api.Test
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.context.annotation.Import
-import org.springframework.test.context.ActiveProfiles
+import io.github.aaravmahajanofficial.auth.jwt.TokenValidationError
 
-@SpringBootTest
-@ActiveProfiles("test")
-@Import(TestcontainersConfiguration::class)
-class ApplicationTests {
-    @Test
-    fun contextLoads() {
-    }
-}
+open class InvalidTokenException(message: String, val error: TokenValidationError? = null, cause: Throwable? = null) :
+    RuntimeException(message, cause)

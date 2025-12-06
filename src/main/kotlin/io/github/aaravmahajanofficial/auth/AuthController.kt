@@ -15,6 +15,7 @@
  */
 package io.github.aaravmahajanofficial.auth
 
+import io.github.aaravmahajanofficial.auth.jwt.JwtAuthenticationPrincipal
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.login.LoginResponseDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
@@ -55,8 +56,13 @@ class AuthController(private val authService: AuthService) {
     )
     fun login(@Valid @RequestBody requestBody: LoginRequestDto): ResponseEntity<ApiResponse<LoginResponseDto>> {
         val user = authService.login(requestBody)
-        return ResponseEntity
-            .status(HttpStatus.OK)
+        return ResponseEntity.ok()
             .body(ApiResponse.Success(user))
+    }
+
+    @PostMapping("/logout")
+    fun logout(@CurrentUser principal: JwtAuthenticationPrincipal): ResponseEntity<Unit> {
+        authService.logout(principal)
+        return ResponseEntity.noContent().build()
     }
 }

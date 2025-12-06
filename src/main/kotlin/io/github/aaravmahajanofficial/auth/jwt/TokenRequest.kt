@@ -13,18 +13,9 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial
+package io.github.aaravmahajanofficial.auth.jwt
 
-import org.junit.jupiter.api.Test
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.context.annotation.Import
-import org.springframework.test.context.ActiveProfiles
+import io.github.aaravmahajanofficial.users.RoleType
+import java.util.UUID
 
-@SpringBootTest
-@ActiveProfiles("test")
-@Import(TestcontainersConfiguration::class)
-class ApplicationTests {
-    @Test
-    fun contextLoads() {
-    }
-}
+data class TokenRequest(val userID: UUID, val email: String, val roles: Set<RoleType>)

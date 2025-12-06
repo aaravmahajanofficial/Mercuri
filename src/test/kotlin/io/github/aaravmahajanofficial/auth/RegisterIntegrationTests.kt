@@ -28,7 +28,6 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -38,12 +37,14 @@ import org.springframework.context.annotation.Import
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.reactive.server.WebTestClient
 
-@Import(TestcontainersConfiguration::class)
+@ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
-class AuthIntegrationTests @Autowired constructor(
+@Import(TestcontainersConfiguration::class)
+class RegisterIntegrationTests @Autowired constructor(
     val webTestClient: WebTestClient,
     val roleRepository: RoleRepository,
     val userRepository: UserRepository,
@@ -51,14 +52,10 @@ class AuthIntegrationTests @Autowired constructor(
 ) {
     @BeforeEach
     fun setup() {
-        if (roleRepository.findByName(RoleType.CUSTOMER) == null) {
-            roleRepository.save(Role(name = RoleType.CUSTOMER))
-        }
-    }
-
-    @AfterEach
-    fun tearDown() {
         userRepository.deleteAll()
+        roleRepository.deleteAll()
+
+        roleRepository.saveAndFlush(Role(name = RoleType.CUSTOMER))
     }
 
     @Test
@@ -79,7 +76,7 @@ class AuthIntegrationTests @Autowired constructor(
             .exchange()
 
         // Then
-        result.expectStatus().isEqualTo(HttpStatus.CREATED)
+        result.expectStatus().isCreated
             .expectHeader().contentType(MediaType.APPLICATION_JSON)
             .expectBody()
             .jsonPath("$.data.id").isNotEmpty
@@ -99,16 +96,17 @@ class AuthIntegrationTests @Autowired constructor(
     }
 
     @Test
-    fun `should return 409 if email already exists`() { // tests unique email constraint and domain handling
+    fun `should return 409 on duplicate email`() { // tests unique email constraint and domain handling
         // Given
-        val existingUser = User(
-            email = "john.doe@example.com",
-            passwordHash = "hashed_password",
-            firstName = "Johnny",
-            lastName = "Doe",
-            phoneNumber = "+1111111111",
+        userRepository.saveAndFlush(
+            User(
+                email = "john.doe@example.com",
+                passwordHash = "hashed_password",
+                firstName = "Johnny",
+                lastName = "Doe",
+                phoneNumber = "+1111111111",
+            ),
         )
-        userRepository.saveAndFlush(existingUser)
 
         // Try to register with same email
         val registerRequest = RegisterRequestDto(
@@ -146,7 +144,6 @@ class AuthIntegrationTests @Autowired constructor(
             .exchange().expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT)
 
         // Then - DB State
-        val user = userRepository.findByEmail(registerRequest.email)
-        user.shouldBeNull() // User should not exist in DB
+        userRepository.findByEmail(registerRequest.email).shouldBeNull() // User should not exist in DB
     }
 }
