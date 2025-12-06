@@ -88,11 +88,19 @@ class JwtService(private val jwtProperties: JwtProperties, private val secretKey
                 TokenValidationResult.invalid(TokenValidationError.WRONG_TOKEN_TYPE)
             }
 
-            else -> TokenValidationResult.valid(
-                UUID.fromString(claims.subject),
-                claims[CLAIMS_EMAIL] as? String ?: "",
-                extractRolesFromClaims(claims),
-            )
+            else -> {
+                val email = claims[CLAIMS_EMAIL] as? String
+                if (email.isNullOrBlank()) {
+                    logger.debug("Missing or empty email claim in token")
+                    TokenValidationResult.invalid(TokenValidationError.MISSING_CLAIMS)
+                } else {
+                    TokenValidationResult.valid(
+                        UUID.fromString(claims.subject),
+                        email,
+                        extractRolesFromClaims(claims),
+                    )
+                }
+            }
         }
     } catch (e: InvalidTokenException) {
         TokenValidationResult.invalid(e.error ?: TokenValidationError.MALFORMED)
