@@ -15,15 +15,12 @@
  */
 package io.github.aaravmahajanofficial
 
-import io.github.aaravmahajanofficial.config.JwtProperties
 import jakarta.annotation.PostConstruct
 import org.springframework.boot.autoconfigure.SpringBootApplication
-import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.runApplication
 import java.util.TimeZone
 
 @SpringBootApplication
-@EnableConfigurationProperties(JwtProperties::class)
 class Application {
 
     @PostConstruct

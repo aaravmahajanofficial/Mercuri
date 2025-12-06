@@ -18,9 +18,12 @@ package io.github.aaravmahajanofficial.auth.token
 import io.github.aaravmahajanofficial.auth.jwt.JwtService
 import io.github.aaravmahajanofficial.auth.jwt.TokenType
 import io.github.aaravmahajanofficial.auth.jwt.TokenValidationError
+import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
+import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
 import io.github.aaravmahajanofficial.common.exception.InvalidTokenException
 import io.github.aaravmahajanofficial.config.JwtProperties
 import io.github.aaravmahajanofficial.users.UserRepository
+import io.github.aaravmahajanofficial.users.UserStatus
 import org.springframework.stereotype.Service
 
 @Service
@@ -36,14 +39,20 @@ class TokenService(
             throw InvalidTokenException("Invalid refresh token", validationResult.error)
         }
 
-        // Verify if the user actually exists
-        val user = userRepository.findByEmail(validationResult.email!!)
+        val email = validationResult.email ?: throw InvalidTokenException(
+            "Missing email claim",
+            TokenValidationError.MISSING_CLAIMS,
+        )
 
-        if (user == null || !user.emailVerified) {
-            throw InvalidTokenException(
-                if (user == null) "User not found" else "Email not verified",
-                TokenValidationError.MISSING_CLAIMS,
-            )
+        // Verify if the user actually exists
+        val user = userRepository.findByEmail(email) ?: throw InvalidTokenException(
+            "User not found",
+            TokenValidationError.MISSING_CLAIMS,
+        )
+
+        when {
+            !user.emailVerified -> throw EmailNotVerifiedException()
+            user.status == UserStatus.SUSPENDED -> throw AccountSuspendedException()
         }
 
         val currentUserRoles = user.roles.map { it.name }.toSet()

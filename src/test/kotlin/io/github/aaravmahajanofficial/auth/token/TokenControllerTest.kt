@@ -18,6 +18,8 @@ package io.github.aaravmahajanofficial.auth.token
 import io.github.aaravmahajanofficial.ProblemResponseAssertions
 import io.github.aaravmahajanofficial.auth.jwt.JwtService
 import io.github.aaravmahajanofficial.auth.jwt.TokenValidationError
+import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
+import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
 import io.github.aaravmahajanofficial.common.exception.InvalidTokenException
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -77,13 +79,12 @@ class TokenControllerTest : ProblemResponseAssertions() {
                 jsonPath("$.data.accessToken") { value(serviceResponse.accessToken) }
                 jsonPath("$.data.tokenType") { value(serviceResponse.tokenType) }
                 jsonPath("$.data.expiresIn") { value(serviceResponse.expiresIn) }
-
                 jsonPath("$.meta.timestamp") { exists() }
             }
         }
 
         @Test
-        fun `should return 401 Unauthorized when refresh token is expired`() {
+        fun `should return 401 Unauthorized when refresh token is invalid or expired`() {
             // Given
             val request = createRefreshTokenRequest("expired.refresh.token")
 
@@ -106,16 +107,11 @@ class TokenControllerTest : ProblemResponseAssertions() {
         }
 
         @Test
-        fun `should return 401 Unauthorized when refresh token is invalid`() {
+        fun `should return 403 Forbidden when user account is suspended`() {
             // Given
-            val request = createRefreshTokenRequest("invalid.token")
+            val request = createRefreshTokenRequest("valid.jwt.token")
 
-            whenever(tokenService.refreshToken(any())).thenThrow(
-                InvalidTokenException(
-                    "Invalid token",
-                    TokenValidationError.INVALID_SIGNATURE,
-                ),
-            )
+            whenever(tokenService.refreshToken(any())).thenThrow(AccountSuspendedException())
 
             // When
             val result = mockMvc.post("/api/v1/auth/token/refresh") {
@@ -125,7 +121,35 @@ class TokenControllerTest : ProblemResponseAssertions() {
             }
 
             // Then
-            assertInvalidToken(result, "/api/v1/auth/token/refresh")
+            assertForbidden(
+                result = result,
+                title = "Account Suspended",
+                detail = "Your account is currently suspended. Please contact support.",
+                instance = "/api/v1/auth/token/refresh",
+            )
+        }
+
+        @Test
+        fun `should return 403 Forbidden when email is not verified`() {
+            // Given
+            val request = createRefreshTokenRequest("valid.jwt.token")
+
+            whenever(tokenService.refreshToken(any())).thenThrow(EmailNotVerifiedException())
+
+            // When
+            val result = mockMvc.post("/api/v1/auth/token/refresh") {
+                contentType = MediaType.APPLICATION_JSON
+                content = objectMapper.writeValueAsString(request)
+                accept = MediaType.APPLICATION_JSON
+            }
+
+            // Then
+            assertForbidden(
+                result = result,
+                title = "Email Not Verified",
+                detail = "You must verify your email address before logging in.",
+                instance = "/api/v1/auth/token/refresh",
+            )
         }
 
         @Test

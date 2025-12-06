@@ -31,8 +31,7 @@ class JwtConfig {
     fun secretKey(jwtProperties: JwtProperties): SecretKey {
         try {
             val keyBytes = Decoders.BASE64URL.decode(jwtProperties.secretKey)
-            val key = Keys.hmacShaKeyFor(keyBytes)
-            return key
+            return Keys.hmacShaKeyFor(keyBytes)
         } catch (e: IllegalArgumentException) {
             throw IllegalArgumentException("JWT Secret Key is not a valid Base64 string", e)
         }

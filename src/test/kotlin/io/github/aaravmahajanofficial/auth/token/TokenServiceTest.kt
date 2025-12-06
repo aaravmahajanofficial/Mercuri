@@ -19,6 +19,8 @@ import io.github.aaravmahajanofficial.auth.jwt.JwtService
 import io.github.aaravmahajanofficial.auth.jwt.TokenType
 import io.github.aaravmahajanofficial.auth.jwt.TokenValidationError
 import io.github.aaravmahajanofficial.auth.jwt.TokenValidationResult
+import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
+import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
 import io.github.aaravmahajanofficial.common.exception.InvalidTokenException
 import io.github.aaravmahajanofficial.config.JwtProperties
 import io.github.aaravmahajanofficial.users.Role
@@ -30,8 +32,6 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.DisplayName
-import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
@@ -82,7 +82,7 @@ class TokenServiceTest {
         addRole(Role(name = RoleType.CUSTOMER))
     }
 
-    private fun createTokenValidationResult(email: String) = TokenValidationResult(
+    private fun createTokenValidationResult(email: String? = null) = TokenValidationResult(
         isValid = true,
         userID = UUID.randomUUID(),
         email = email,
@@ -93,141 +93,122 @@ class TokenServiceTest {
         refreshToken = refreshToken,
     )
 
-    @Nested
-    @DisplayName("Successful Refresh")
-    inner class SuccessfulRefresh {
-
-        @Test
-        fun `should refresh token successfully`() {
-            // Given
-            val refreshToken = "valid.refresh.token"
-            val user = createExistingUser()
-
-            whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
-                createTokenValidationResult(user.email),
-            )
-            whenever(userRepository.findByEmail(user.email)).thenReturn(createExistingUser())
-
-            val newAccessToken = "new.access.token"
-            whenever(jwtService.refreshAccessToken(refreshToken, setOf(RoleType.CUSTOMER))).thenReturn(
-                newAccessToken,
-            )
-
-            // When
-            val result = tokenService.refreshToken(createRefreshTokenRequest(refreshToken))
-
-            // Then
-            result.accessToken shouldBe newAccessToken
-            result.expiresIn shouldBe 900_000L / 1000
+    @Test
+    fun `should refresh token successfully and include latest user roles`() {
+        // Given
+        val refreshToken = "valid.refresh.token"
+        val newAccessToken = "new.access.token"
+        val user = createExistingUser().apply {
+            addRole(Role(RoleType.SELLER))
         }
+
+        whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
+            createTokenValidationResult(user.email),
+        )
+        whenever(userRepository.findByEmail(user.email)).thenReturn(user)
+        whenever(jwtService.refreshAccessToken(any(), any())).thenReturn(newAccessToken)
+
+        // When
+        val result = tokenService.refreshToken(createRefreshTokenRequest(refreshToken))
+
+        // Then
+        result.accessToken shouldBe newAccessToken
+        result.expiresIn shouldBe 900L
+
+        // Verify the new token was created using user's updated roles from DB
+        verify(jwtService).refreshAccessToken(
+            eq(refreshToken),
+            check { roles ->
+                roles shouldContainExactlyInAnyOrder setOf(RoleType.CUSTOMER, RoleType.SELLER)
+            },
+        )
     }
 
-    @Nested
-    @DisplayName("Token Validation Failures")
-    inner class TokenValidationFailures {
+    @Test
+    fun `should throw InvalidTokenException when token validation fails`() {
+        // Given
+        val refreshToken = "invalid.token"
 
-        @Test
-        fun `should throw when refresh token is invalid`() {
-            // Given
-            val refreshToken = "invalid.token"
+        whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
+            TokenValidationResult.invalid(
+                TokenValidationError.INVALID_SIGNATURE,
+            ),
+        )
 
-            whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
-                TokenValidationResult.invalid(
-                    TokenValidationError.INVALID_SIGNATURE,
-                ),
-            )
-
-            // When & Then
+        // When & Then
+        val exception =
             shouldThrow<InvalidTokenException> { tokenService.refreshToken(createRefreshTokenRequest(refreshToken)) }
-        }
 
-        @Test
-        fun `should throw when refresh token is expired`() {
-            // Given
-            val refreshToken = "expired.token"
-
-            whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
-                TokenValidationResult.invalid(
-                    TokenValidationError.EXPIRED,
-                ),
-            )
-            // When & Then
-            shouldThrow<InvalidTokenException> {
-                tokenService.refreshToken(createRefreshTokenRequest(refreshToken))
-            }
-        }
+        exception.message shouldBe "Invalid refresh token"
+        exception.error shouldBe TokenValidationError.INVALID_SIGNATURE
     }
 
-    @Nested
-    @DisplayName("User Validation Failures")
-    inner class UserValidationFailures {
+    @Test
+    fun `should throw InvalidTokenException when email claim is missing`() {
+        // Given
+        val refreshToken = "valid.token.no.email"
 
-        @Test
-        fun `should throw when user does not exist`() {
-            // Given
-            val refreshToken = "valid.access.token"
-            val userEmail = "non_existing@example.com"
-
-            whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
-                createTokenValidationResult(userEmail),
-            )
-            whenever(userRepository.findByEmail(userEmail)).thenReturn(null)
-
-            // When & Then
-            shouldThrow<InvalidTokenException> {
-                tokenService.refreshToken(createRefreshTokenRequest(refreshToken))
-            }
-        }
-
-        @Test
-        fun `should throw when user email is not verified`() {
-            // Given
-            val refreshToken = "valid.refresh.token"
-            val user = createExistingUser(emailVerified = false)
-
-            whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
-                createTokenValidationResult(user.email),
-            )
-            whenever(userRepository.findByEmail(user.email)).thenReturn(user)
-
-            // When & Then
-            shouldThrow<InvalidTokenException> {
-                tokenService.refreshToken(createRefreshTokenRequest(refreshToken))
-            }
-        }
-    }
-
-    @Nested
-    @DisplayName("Role Handling")
-    inner class RoleHandling {
-
-        @Test
-        fun `should pass correct roles to refreshAccessToken()`() {
-            // Given
-            val refreshToken = "valid.refresh.token"
-            val user = createExistingUser().apply {
-                addRole(Role(RoleType.SELLER))
-            }
-
-            whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
-                createTokenValidationResult(user.email),
-            )
-            whenever(userRepository.findByEmail(user.email)).thenReturn(user)
-
-            whenever(jwtService.refreshAccessToken(any(), any())).thenReturn(
-                "new.access.token",
-            )
-
-            // When
+        whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
+            createTokenValidationResult(email = null),
+        )
+        // When & Then
+        val exception = shouldThrow<InvalidTokenException> {
             tokenService.refreshToken(createRefreshTokenRequest(refreshToken))
+        }
+        exception.message shouldBe "Missing email claim"
+        exception.error shouldBe TokenValidationError.MISSING_CLAIMS
+    }
 
-            // Then
-            verify(jwtService).refreshAccessToken(
-                eq(refreshToken),
-                check { roles ->
-                    roles shouldContainExactlyInAnyOrder setOf(RoleType.CUSTOMER, RoleType.SELLER)
-                },
-            )
+    @Test
+    fun `should throw InvalidTokenException when user does not exist`() {
+        // Given
+        val refreshToken = "valid.access.token"
+        val userEmail = "unknown@example.com"
+
+        whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
+            createTokenValidationResult(userEmail),
+        )
+        whenever(userRepository.findByEmail(userEmail)).thenReturn(null)
+
+        // When & Then
+        val exception = shouldThrow<InvalidTokenException> {
+            tokenService.refreshToken(createRefreshTokenRequest(refreshToken))
+        }
+        exception.message shouldBe "User not found"
+        exception.error shouldBe TokenValidationError.MISSING_CLAIMS
+    }
+
+    @Test
+    fun `should throw EmailNotVerifiedException when user email is not verified`() {
+        // Given
+        val refreshToken = "valid.refresh.token"
+        val user = createExistingUser(emailVerified = false)
+
+        whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
+            createTokenValidationResult(user.email),
+        )
+        whenever(userRepository.findByEmail(user.email)).thenReturn(user)
+
+        // When & Then
+        shouldThrow<EmailNotVerifiedException> {
+            tokenService.refreshToken(createRefreshTokenRequest(refreshToken))
+        }
+    }
+
+    @Test
+    fun `should throw AccountSuspendedException when user account is suspended`() {
+        // Given
+        val refreshToken = "valid.refresh.token"
+        val user = createExistingUser().apply { status = UserStatus.SUSPENDED }
+
+        whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
+            createTokenValidationResult(user.email),
+        )
+        whenever(userRepository.findByEmail(user.email)).thenReturn(user)
+
+        // When & Then
+        shouldThrow<AccountSuspendedException> {
+            tokenService.refreshToken(createRefreshTokenRequest(refreshToken))
         }
     }
 }
