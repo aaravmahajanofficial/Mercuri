@@ -15,9 +15,9 @@
  */
 package io.github.aaravmahajanofficial.auth.token
 
-data class RefreshTokenResponseDto(
-    val accessToken: String,
-    val refreshToken: String,
-    val tokenType: String = "Bearer",
-    val expiresIn: Long,
-)
+import org.springframework.data.jpa.repository.JpaRepository
+import java.util.UUID
+
+interface RefreshTokenRepository : JpaRepository<RefreshToken, UUID> {
+    fun findAllByUserIdAndRevokedFalse(userId: UUID): List<RefreshToken>
+}

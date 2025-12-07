@@ -4,11 +4,13 @@
   <CurrentIssues>
     <ID>EmptyFunctionBlock:ApplicationTests.kt:ApplicationTests${ }</ID>
     <ID>EmptyFunctionBlock:AuthService.kt:AuthService${}</ID>
+    <ID>MagicNumber:JwtService.kt:JwtService$1000</ID>
     <ID>ProtectedMemberInFinalClass:User.kt:User$@ManyToMany(fetch = FetchType.EAGER) @JoinTable( name = "user_role", joinColumns = [JoinColumn(name = "user_id")], inverseJoinColumns = [JoinColumn(name = "role_id")], ) @OnDelete(action = OnDeleteAction.CASCADE) protected var _roles: MutableSet&lt;Role&gt; = mutableSetOf()</ID>
     <ID>ProtectedMemberInFinalClass:User.kt:User$@OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true) protected var _addresses: MutableSet&lt;UserAddress&gt; = mutableSetOf()</ID>
     <ID>ReturnCount:JwtAuthenticationFilter.kt:JwtAuthenticationFilter$override fun doFilterInternal( request: HttpServletRequest, response: HttpServletResponse, filterChain: FilterChain, )</ID>
-    <ID>ThrowsCount:AuthService.kt:AuthService$@Transactional fun login(requestBody: LoginRequestDto): LoginResponseDto</ID>
-    <ID>ThrowsCount:TokenService.kt:TokenService$fun refreshToken(request: RefreshTokenRequestDto): RefreshTokenResponseDto</ID>
+    <ID>ReturnCount:JwtService.kt:JwtService$fun validateToken(token: String, expectedType: TokenType): TokenValidationResult</ID>
+    <ID>ReturnCount:RefreshTokenManager.kt:RefreshTokenManager$fun isTokenValid(jti: UUID): Boolean</ID>
+    <ID>ThrowsCount:TokenService.kt:TokenService$fun refreshAccessToken(request: RefreshTokenRequestDto): RefreshTokenResponseDto</ID>
     <ID>UnusedParameter:AuthService.kt:AuthService$principal: JwtAuthenticationPrincipal</ID>
     <ID>VariableNaming:User.kt:User$@ManyToMany(fetch = FetchType.EAGER) @JoinTable( name = "user_role", joinColumns = [JoinColumn(name = "user_id")], inverseJoinColumns = [JoinColumn(name = "role_id")], ) @OnDelete(action = OnDeleteAction.CASCADE) protected var _roles: MutableSet&lt;Role&gt; = mutableSetOf()</ID>
     <ID>VariableNaming:User.kt:User$@OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true) protected var _addresses: MutableSet&lt;UserAddress&gt; = mutableSetOf()</ID>

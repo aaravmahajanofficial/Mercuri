@@ -61,9 +61,9 @@ class TokenControllerTest : ProblemResponseAssertions() {
         fun `should return 200 OK with new access token`() {
             // Given
             val request = createRefreshTokenRequest("new.refresh.token")
-            val serviceResponse = RefreshTokenResponseDto("new.access.token", "Bearer", 900)
+            val serviceResponse = RefreshTokenResponseDto("new.access.token", "Bearer", "new.refresh.token", 900)
 
-            whenever(tokenService.refreshToken(any())).thenReturn(serviceResponse)
+            whenever(tokenService.refreshAccessToken(any())).thenReturn(serviceResponse)
 
             // When
             val result = mockMvc.post("/api/v1/auth/token/refresh") {
@@ -77,6 +77,7 @@ class TokenControllerTest : ProblemResponseAssertions() {
                 status { isOk() }
                 content { contentTypeCompatibleWith(MediaType.APPLICATION_JSON) }
                 jsonPath("$.data.accessToken") { value(serviceResponse.accessToken) }
+                jsonPath("$.data.refreshToken") { value(serviceResponse.refreshToken) }
                 jsonPath("$.data.tokenType") { value(serviceResponse.tokenType) }
                 jsonPath("$.data.expiresIn") { value(serviceResponse.expiresIn) }
                 jsonPath("$.meta.timestamp") { exists() }
@@ -88,7 +89,7 @@ class TokenControllerTest : ProblemResponseAssertions() {
             // Given
             val request = createRefreshTokenRequest("expired.refresh.token")
 
-            whenever(tokenService.refreshToken(any())).thenThrow(
+            whenever(tokenService.refreshAccessToken(any())).thenThrow(
                 InvalidTokenException(
                     "Token expired",
                     TokenValidationError.EXPIRED,
@@ -111,7 +112,7 @@ class TokenControllerTest : ProblemResponseAssertions() {
             // Given
             val request = createRefreshTokenRequest("valid.jwt.token")
 
-            whenever(tokenService.refreshToken(any())).thenThrow(AccountSuspendedException())
+            whenever(tokenService.refreshAccessToken(any())).thenThrow(AccountSuspendedException())
 
             // When
             val result = mockMvc.post("/api/v1/auth/token/refresh") {
@@ -134,7 +135,7 @@ class TokenControllerTest : ProblemResponseAssertions() {
             // Given
             val request = createRefreshTokenRequest("valid.jwt.token")
 
-            whenever(tokenService.refreshToken(any())).thenThrow(EmailNotVerifiedException())
+            whenever(tokenService.refreshAccessToken(any())).thenThrow(EmailNotVerifiedException())
 
             // When
             val result = mockMvc.post("/api/v1/auth/token/refresh") {

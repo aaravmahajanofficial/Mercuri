@@ -15,9 +15,8 @@
  */
 package io.github.aaravmahajanofficial.auth.token
 
-data class RefreshTokenResponseDto(
-    val accessToken: String,
-    val refreshToken: String,
-    val tokenType: String = "Bearer",
-    val expiresIn: Long,
-)
+enum class RefreshTokenStatus {
+    ISSUED,
+    USED,
+    REVOKED,
+}

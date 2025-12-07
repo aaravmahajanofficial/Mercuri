@@ -26,5 +26,6 @@ spring:
 
 jwt:
   secret-key: ${JWT_SECRET_BASE64}
+  refresh-token-secret-key: ${REFRESH_SECRET_BASE64}
   access-token-expiration: 900000 # in milliseconds (15 minutes = 900,000ms)
   refresh-token-expiration: 604800000 # in milliseconds (7 days = 604,800,000ms)

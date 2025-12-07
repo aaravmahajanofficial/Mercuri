@@ -41,6 +41,8 @@ class JwtService(private val jwtProperties: JwtProperties, private val secretKey
         private const val CLAIMS_TYPE = "type"
     }
 
+    fun accessTokenExpiration(): Long = jwtProperties.accessTokenExpiration / 1000
+
     fun generateAccessToken(request: TokenRequest): String {
         val now = Date()
         val expiration = Date(now.time + jwtProperties.accessTokenExpiration)
@@ -57,12 +59,12 @@ class JwtService(private val jwtProperties: JwtProperties, private val secretKey
             .compact()
     }
 
-    fun generateRefreshToken(request: TokenRequest): String {
+    fun generateRefreshToken(request: TokenRequest, jti: UUID = UUID.randomUUID()): String {
         val now = Date()
         val expiration = Date(now.time + jwtProperties.refreshTokenExpiration)
 
         return Jwts.builder()
-            .id(UUID.randomUUID().toString())
+            .id(jti.toString())
             .subject(request.userID.toString())
             .claim(CLAIMS_EMAIL, request.email)
             .claim(CLAIMS_TYPE, TokenType.REFRESH.name)
@@ -75,35 +77,39 @@ class JwtService(private val jwtProperties: JwtProperties, private val secretKey
     fun generateTokenPair(request: TokenRequest): TokenPair = TokenPair(
         accessToken = generateAccessToken(request),
         refreshToken = generateRefreshToken(request),
-        expiresIn = jwtProperties.accessTokenExpiration / 1000,
+        expiresIn = accessTokenExpiration(),
     )
 
-    fun validateToken(token: String, expectedType: TokenType): TokenValidationResult = try {
-        val claims = extractAllClaims(token)
-        val actualType = claims[CLAIMS_TYPE] as? String
+    fun validateToken(token: String, expectedType: TokenType): TokenValidationResult {
+        return try {
+            val claims = extractAllClaims(token)
+            val actualType = claims.get(CLAIMS_TYPE, String::class.java)
 
-        when {
-            actualType != expectedType.name -> {
+            if (actualType != expectedType.name) {
                 logger.debug("Token type mismatch: expected {}, actual {}", expectedType, actualType)
-                TokenValidationResult.invalid(TokenValidationError.WRONG_TOKEN_TYPE)
+                return TokenValidationResult.invalid(TokenValidationError.WRONG_TOKEN_TYPE)
             }
 
-            else -> {
-                val email = claims[CLAIMS_EMAIL] as? String
-                if (email.isNullOrBlank()) {
-                    logger.debug("Missing or empty email claim in token")
-                    TokenValidationResult.invalid(TokenValidationError.MISSING_CLAIMS)
-                } else {
-                    TokenValidationResult.valid(
-                        UUID.fromString(claims.subject),
-                        email,
-                        extractRolesFromClaims(claims),
-                    )
-                }
+            val email = claims.get(CLAIMS_EMAIL, String::class.java)
+            if (email.isNullOrBlank()) {
+                logger.debug("Missing or empty email claim in token")
+                return TokenValidationResult.invalid(TokenValidationError.MISSING_CLAIMS)
             }
+
+            val userId = runCatching { UUID.fromString(claims.subject) }.getOrElse {
+                logger.debug("Invalid subject (user ID) in token: {}", claims.subject)
+                return TokenValidationResult.invalid(TokenValidationError.MALFORMED)
+            }
+
+            TokenValidationResult.valid(
+                jti = UUID.fromString(claims.id),
+                userID = userId,
+                email = email,
+                roles = extractRolesFromClaims(claims),
+            )
+        } catch (e: InvalidTokenException) {
+            TokenValidationResult.invalid(e.error ?: TokenValidationError.MALFORMED)
         }
-    } catch (e: InvalidTokenException) {
-        TokenValidationResult.invalid(e.error ?: TokenValidationError.MALFORMED)
     }
 
     fun extractAllClaims(token: String): Claims = try {
@@ -135,21 +141,5 @@ class JwtService(private val jwtProperties: JwtProperties, private val secretKey
                 null
             }
         }.toSet()
-    }
-
-    fun refreshAccessToken(refreshToken: String, currentRoles: Set<RoleType>): String {
-        val validationResult = validateToken(refreshToken, TokenType.REFRESH)
-
-        if (!validationResult.isValid) {
-            throw InvalidTokenException("Invalid refresh token", validationResult.error)
-        }
-
-        val tokenRequest = TokenRequest(
-            userID = validationResult.userID!!,
-            email = validationResult.email!!,
-            roles = currentRoles,
-        )
-
-        return generateAccessToken(tokenRequest)
     }
 }

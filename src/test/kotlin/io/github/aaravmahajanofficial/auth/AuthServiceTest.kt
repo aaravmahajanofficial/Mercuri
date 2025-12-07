@@ -18,9 +18,9 @@ package io.github.aaravmahajanofficial.auth
 import io.github.aaravmahajanofficial.auth.events.UserLoginEvent
 import io.github.aaravmahajanofficial.auth.events.UserRegisterEvent
 import io.github.aaravmahajanofficial.auth.jwt.JwtService
-import io.github.aaravmahajanofficial.auth.jwt.TokenPair
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
+import io.github.aaravmahajanofficial.auth.token.RefreshTokenManager
 import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
 import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
 import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
@@ -74,6 +74,9 @@ class AuthServiceTest {
     @Mock
     lateinit var jwtService: JwtService
 
+    @Mock
+    lateinit var refreshTokenManager: RefreshTokenManager
+
     @InjectMocks
     lateinit var authService: AuthService
 
@@ -107,9 +110,6 @@ class AuthServiceTest {
         id = UUID.randomUUID()
         addRole(createCustomerRole())
     }
-
-    private fun createTokenPair() =
-        TokenPair(accessToken = "mock.access.token", refreshToken = "mock.refresh.token", expiresIn = 900)
 
     @Nested
     inner class Registration {
@@ -195,12 +195,11 @@ class AuthServiceTest {
 
             val updatedUser = existingUser.apply {
                 lastLoginAt = Instant.now()
-                updatedAt = Instant.now()
             }
             whenever(userRepository.saveAndFlush(any())).thenReturn(updatedUser)
-
-            val tokenPair = createTokenPair()
-            whenever(jwtService.generateTokenPair(any())).thenReturn(tokenPair)
+            whenever(jwtService.generateAccessToken(any())).thenReturn("new.access.token")
+            whenever(refreshTokenManager.createRefreshToken(existingUser)).thenReturn("new.refresh.token")
+            whenever(jwtService.accessTokenExpiration()).thenReturn(900L)
 
             // When
             val result = authService.login(request)
@@ -210,7 +209,6 @@ class AuthServiceTest {
                 .saveAndFlush(
                     check {
                         it.lastLoginAt.shouldNotBeNull() // Confirm service actually set timestamp before saving
-                        it.updatedAt.shouldNotBeNull() // Confirm service actually set timestamp before saving
                     },
                 )
 
@@ -220,7 +218,7 @@ class AuthServiceTest {
             eventCaptor.firstValue.user.email shouldBe request.email
 
             // Then - Verify token request correctness
-            verify(jwtService).generateTokenPair(
+            verify(jwtService).generateAccessToken(
                 check {
                     it.userID shouldBe updatedUser.id
                     it.email shouldBe updatedUser.email
@@ -228,10 +226,10 @@ class AuthServiceTest {
                 },
             )
 
-            result.accessToken shouldBe tokenPair.accessToken
-            result.refreshToken shouldBe tokenPair.refreshToken
-            result.expiresIn shouldBe tokenPair.expiresIn
-            result.tokenType shouldBe tokenPair.tokenType
+            result.accessToken shouldBe "new.access.token"
+            result.refreshToken shouldBe "new.refresh.token"
+            result.expiresIn shouldBe 900L
+            result.tokenType shouldBe "Bearer"
             result.authStatus shouldBe AuthStatus.VERIFIED
             result.user.lastLoginAt shouldBe updatedUser.lastLoginAt
         }

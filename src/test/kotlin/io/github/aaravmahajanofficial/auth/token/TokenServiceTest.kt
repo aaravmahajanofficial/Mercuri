@@ -39,7 +39,6 @@ import org.mockito.Mockito.lenient
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.check
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.Instant
@@ -57,11 +56,14 @@ class TokenServiceTest {
     @Mock
     lateinit var jwtProperties: JwtProperties
 
+    @Mock
+    lateinit var refreshTokenManager: RefreshTokenManager
+
     private lateinit var tokenService: TokenService
 
     @BeforeEach
     fun setUp() {
-        tokenService = TokenService(jwtService, userRepository, jwtProperties)
+        tokenService = TokenService(jwtService, userRepository, jwtProperties, refreshTokenManager)
 
         lenient().whenever(jwtProperties.accessTokenExpiration).thenReturn(900_000L)
     }
@@ -84,12 +86,13 @@ class TokenServiceTest {
 
     private fun createTokenValidationResult(email: String? = null) = TokenValidationResult(
         isValid = true,
+        jti = UUID.randomUUID(),
         userID = UUID.randomUUID(),
         email = email,
         roles = setOf(RoleType.CUSTOMER),
     )
 
-    private fun createRefreshTokenRequest(refreshToken: String) = RefreshTokenRequestDto(
+    private fun createRefreshAccessTokenRequest(refreshToken: String) = RefreshTokenRequestDto(
         refreshToken = refreshToken,
     )
 
@@ -98,6 +101,7 @@ class TokenServiceTest {
         // Given
         val refreshToken = "valid.refresh.token"
         val newAccessToken = "new.access.token"
+        val newRefreshToken = "new.refresh.token"
         val user = createExistingUser().apply {
             addRole(Role(RoleType.SELLER))
         }
@@ -105,23 +109,43 @@ class TokenServiceTest {
         whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
             createTokenValidationResult(user.email),
         )
+        whenever(refreshTokenManager.isTokenValid(any())).thenReturn(true)
         whenever(userRepository.findByEmail(user.email)).thenReturn(user)
-        whenever(jwtService.refreshAccessToken(any(), any())).thenReturn(newAccessToken)
+        whenever(refreshTokenManager.rotateRefreshToken(any(), any())).thenReturn(newRefreshToken)
+        whenever(jwtService.generateAccessToken(any())).thenReturn(newAccessToken)
 
         // When
-        val result = tokenService.refreshToken(createRefreshTokenRequest(refreshToken))
+        val result = tokenService.refreshAccessToken(createRefreshAccessTokenRequest(refreshToken))
 
         // Then
         result.accessToken shouldBe newAccessToken
         result.expiresIn shouldBe 900L
 
         // Verify the new token was created using user's updated roles from DB
-        verify(jwtService).refreshAccessToken(
-            eq(refreshToken),
-            check { roles ->
-                roles shouldContainExactlyInAnyOrder setOf(RoleType.CUSTOMER, RoleType.SELLER)
+        verify(jwtService).generateAccessToken(
+            check {
+                it.roles shouldContainExactlyInAnyOrder setOf(RoleType.CUSTOMER, RoleType.SELLER)
             },
         )
+    }
+
+    @Test
+    fun `should throw InvalidTokenException on revoked or invalid token`() {
+        // Given
+        val refreshToken = "revoked.refresh.token"
+
+        whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(createTokenValidationResult())
+        whenever(refreshTokenManager.isTokenValid(any())).thenReturn(false)
+
+        // When & Then
+        val exception =
+            shouldThrow<InvalidTokenException> {
+                tokenService.refreshAccessToken(
+                    createRefreshAccessTokenRequest(refreshToken),
+                )
+            }
+
+        exception.error shouldBe TokenValidationError.INVALID_SIGNATURE
     }
 
     @Test
@@ -137,7 +161,11 @@ class TokenServiceTest {
 
         // When & Then
         val exception =
-            shouldThrow<InvalidTokenException> { tokenService.refreshToken(createRefreshTokenRequest(refreshToken)) }
+            shouldThrow<InvalidTokenException> {
+                tokenService.refreshAccessToken(
+                    createRefreshAccessTokenRequest(refreshToken),
+                )
+            }
 
         exception.message shouldBe "Invalid refresh token"
         exception.error shouldBe TokenValidationError.INVALID_SIGNATURE
@@ -151,9 +179,11 @@ class TokenServiceTest {
         whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
             createTokenValidationResult(email = null),
         )
+        whenever(refreshTokenManager.isTokenValid(any())).thenReturn(true)
+
         // When & Then
         val exception = shouldThrow<InvalidTokenException> {
-            tokenService.refreshToken(createRefreshTokenRequest(refreshToken))
+            tokenService.refreshAccessToken(createRefreshAccessTokenRequest(refreshToken))
         }
         exception.message shouldBe "Missing email claim"
         exception.error shouldBe TokenValidationError.MISSING_CLAIMS
@@ -168,11 +198,12 @@ class TokenServiceTest {
         whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
             createTokenValidationResult(userEmail),
         )
+        whenever(refreshTokenManager.isTokenValid(any())).thenReturn(true)
         whenever(userRepository.findByEmail(userEmail)).thenReturn(null)
 
         // When & Then
         val exception = shouldThrow<InvalidTokenException> {
-            tokenService.refreshToken(createRefreshTokenRequest(refreshToken))
+            tokenService.refreshAccessToken(createRefreshAccessTokenRequest(refreshToken))
         }
         exception.message shouldBe "User not found"
         exception.error shouldBe TokenValidationError.MISSING_CLAIMS
@@ -187,11 +218,12 @@ class TokenServiceTest {
         whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
             createTokenValidationResult(user.email),
         )
+        whenever(refreshTokenManager.isTokenValid(any())).thenReturn(true)
         whenever(userRepository.findByEmail(user.email)).thenReturn(user)
 
         // When & Then
         shouldThrow<EmailNotVerifiedException> {
-            tokenService.refreshToken(createRefreshTokenRequest(refreshToken))
+            tokenService.refreshAccessToken(createRefreshAccessTokenRequest(refreshToken))
         }
     }
 
@@ -204,11 +236,12 @@ class TokenServiceTest {
         whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
             createTokenValidationResult(user.email),
         )
+        whenever(refreshTokenManager.isTokenValid(any())).thenReturn(true)
         whenever(userRepository.findByEmail(user.email)).thenReturn(user)
 
         // When & Then
         shouldThrow<AccountSuspendedException> {
-            tokenService.refreshToken(createRefreshTokenRequest(refreshToken))
+            tokenService.refreshAccessToken(createRefreshAccessTokenRequest(refreshToken))
         }
     }
 }

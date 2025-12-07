@@ -26,6 +26,9 @@ data class JwtProperties(
     @field:NotBlank(message = "JWT secret key must be configured")
     val secretKey: String,
 
+    @field:NotBlank(message = "Refresh token secret key must be configured")
+    val refreshTokenSecretKey: String,
+
     @field:Min(value = 60000, message = "Access token expiration must be at least 1 minute (60000ms)")
     val accessTokenExpiration: Long = 900_000L,
 

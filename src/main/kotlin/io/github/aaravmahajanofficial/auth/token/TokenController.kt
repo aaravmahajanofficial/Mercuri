@@ -38,7 +38,7 @@ class TokenController(private val tokenService: TokenService) {
     fun refreshToken(
         @Valid @RequestBody requestBody: RefreshTokenRequestDto,
     ): ResponseEntity<ApiResponse<RefreshTokenResponseDto>> {
-        val response = tokenService.refreshToken(requestBody)
+        val response = tokenService.refreshAccessToken(requestBody)
         return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.Success(response))
     }
 }

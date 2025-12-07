@@ -17,6 +17,7 @@ package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.TestcontainersConfiguration
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
+import io.github.aaravmahajanofficial.auth.token.RefreshTokenRepository
 import io.github.aaravmahajanofficial.users.Role
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
@@ -47,11 +48,13 @@ class LoginIntegrationTests @Autowired constructor(
     val roleRepository: RoleRepository,
     val userRepository: UserRepository,
     val passwordEncoder: PasswordEncoder,
+    val refreshTokenRepository: RefreshTokenRepository,
 ) {
     @BeforeEach
     fun setup() {
         roleRepository.deleteAll()
         userRepository.deleteAll()
+        refreshTokenRepository.deleteAll()
 
         roleRepository.saveAndFlush(Role(name = RoleType.CUSTOMER))
     }

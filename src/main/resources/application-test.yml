@@ -1,4 +1,5 @@
 jwt:
   secret-key: "l3BDSulNvLv0bT3AqBqEgmx9Lk_3OYLyDMicwoMTwfQHfcMQETl82oAHHMjmP2vJkujxc1lPpT0pvzHUzyY7tA"
+  refresh-token-secret-key: "l3BDSulNvLv0bT3AqBqEgmx9Lk_3OYLyDMicwoMTwfQHfcMQETl82oAHHMjmP2vJkujxc1lPpT0pvzHUzyY7tA"
   access-token-expiration: 900000
   refresh-token-expiration: 604800000

@@ -20,14 +20,16 @@ import java.util.UUID
 
 data class TokenValidationResult(
     val isValid: Boolean,
+    val jti: UUID? = null,
     val userID: UUID? = null,
     val email: String? = null,
     val roles: Set<RoleType>? = null,
     val error: TokenValidationError? = null,
 ) {
     companion object {
-        fun valid(userID: UUID, email: String, roles: Set<RoleType>) = TokenValidationResult(
+        fun valid(jti: UUID, userID: UUID, email: String, roles: Set<RoleType>) = TokenValidationResult(
             isValid = true,
+            jti = jti,
             userID = userID,
             email = email,
             roles = roles,
