@@ -17,6 +17,9 @@ package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.auth.events.UserLoginEvent
 import io.github.aaravmahajanofficial.auth.events.UserRegisterEvent
+import io.github.aaravmahajanofficial.auth.jwt.JwtAuthenticationPrincipal
+import io.github.aaravmahajanofficial.auth.jwt.JwtService
+import io.github.aaravmahajanofficial.auth.jwt.TokenRequest
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.login.LoginResponseDto
 import io.github.aaravmahajanofficial.auth.mappers.toRegisterResponse
@@ -24,12 +27,14 @@ import io.github.aaravmahajanofficial.auth.mappers.toUser
 import io.github.aaravmahajanofficial.auth.mappers.toUserDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
+import io.github.aaravmahajanofficial.auth.token.RefreshTokenManager
 import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
 import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
 import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
 import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
+import io.github.aaravmahajanofficial.users.User
 import io.github.aaravmahajanofficial.users.UserRepository
 import io.github.aaravmahajanofficial.users.UserStatus
 import jakarta.transaction.Transactional
@@ -45,6 +50,8 @@ class AuthService(
     private val passwordEncoder: PasswordEncoder,
     private val roleRepository: RoleRepository,
     private val applicationEventPublisher: ApplicationEventPublisher,
+    private val jwtService: JwtService,
+    private val refreshTokenManager: RefreshTokenManager,
 ) {
 
     @Transactional
@@ -56,8 +63,7 @@ class AuthService(
         val role = roleRepository.findByName(RoleType.CUSTOMER)
             ?: throw DefaultRoleNotFoundException()
 
-        val hashedPassword = passwordEncoder.encode(requestBody.password)!!
-
+        val hashedPassword = hashPassword(requestBody)
         val user = requestBody.toUser(hashedPassword).apply { addRole(role) }
 
         // Hibernate delays SQL execution until flush/commit.
@@ -74,13 +80,54 @@ class AuthService(
 
     @Transactional
     fun login(requestBody: LoginRequestDto): LoginResponseDto {
-        val user = userRepository.findByEmail(requestBody.email)
-            ?: throw BadCredentialsException("Invalid credentials")
+        val rawUser = findUserByEmailOrThrow(requestBody)
 
+        validatePasswordOrThrow(requestBody, rawUser)
+        validateUserStatusOrThrow(rawUser)
+
+        val managedUser = updateLoginTimestamps(rawUser)
+
+        applicationEventPublisher.publishEvent(UserLoginEvent(managedUser))
+
+        // Generate JWT Tokens
+        val tokenRequest = buildTokenRequest(managedUser)
+        val accessToken = jwtService.generateAccessToken(tokenRequest)
+        val refreshToken = refreshTokenManager.createRefreshToken(managedUser)
+
+        return LoginResponseDto(
+            accessToken = accessToken,
+            refreshToken = refreshToken,
+            tokenType = "Bearer",
+            expiresIn = jwtService.accessTokenExpiration(),
+            authStatus = AuthStatus.VERIFIED,
+            user = managedUser.toUserDto(),
+        )
+    }
+
+    fun logout(principal: JwtAuthenticationPrincipal) {
+        // Will be implemented later
+    }
+
+    private fun findUserByEmailOrThrow(requestBody: LoginRequestDto): User = (
+        userRepository.findByEmail(requestBody.email)
+            ?: throw BadCredentialsException("Invalid credentials")
+        )
+
+    private fun updateLoginTimestamps(user: User): User {
+        user.lastLoginAt = Instant.now()
+        return userRepository.save(user)
+    }
+
+    private fun validatePasswordOrThrow(requestBody: LoginRequestDto, user: User) {
         if (!passwordEncoder.matches(requestBody.password, user.passwordHash)) {
             throw BadCredentialsException("Invalid credentials")
         }
+    }
 
+    private fun hashPassword(requestBody: RegisterRequestDto): String =
+        requireNotNull(passwordEncoder.encode(requestBody.password)) { ("Password encoder returned null hash") }
+
+    private fun validateUserStatusOrThrow(user: User) {
         if (user.status == UserStatus.SUSPENDED) {
             throw AccountSuspendedException()
         }
@@ -88,19 +135,11 @@ class AuthService(
         if (!user.emailVerified) {
             throw EmailNotVerifiedException()
         }
-
-        user.apply {
-            lastLoginAt = Instant.now()
-            updatedAt = Instant.now()
-        }
-        val updatedUser = userRepository.saveAndFlush(user)
-
-        applicationEventPublisher.publishEvent(UserLoginEvent(updatedUser))
-
-        return LoginResponseDto(
-            accessToken = "accessToken",
-            authStatus = AuthStatus.VERIFIED,
-            user = updatedUser.toUserDto(),
-        )
     }
+
+    private fun buildTokenRequest(updatedUser: User): TokenRequest = TokenRequest(
+        userID = requireNotNull(updatedUser.id) { "User ID must be set after persistence" },
+        email = updatedUser.email,
+        roles = updatedUser.roles.map { it.name }.toSet(),
+    )
 }

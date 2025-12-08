@@ -17,8 +17,10 @@ package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.auth.events.UserLoginEvent
 import io.github.aaravmahajanofficial.auth.events.UserRegisterEvent
+import io.github.aaravmahajanofficial.auth.jwt.JwtService
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
+import io.github.aaravmahajanofficial.auth.token.RefreshTokenManager
 import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
 import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
 import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
@@ -43,6 +45,7 @@ import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.check
+import org.mockito.kotlin.isNull
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
@@ -68,6 +71,12 @@ class AuthServiceTest {
 
     @Mock
     lateinit var eventPublisher: ApplicationEventPublisher
+
+    @Mock
+    lateinit var jwtService: JwtService
+
+    @Mock
+    lateinit var refreshTokenManager: RefreshTokenManager
 
     @InjectMocks
     lateinit var authService: AuthService
@@ -185,31 +194,54 @@ class AuthServiceTest {
             whenever(userRepository.findByEmail(request.email)).thenReturn(existingUser)
             whenever(passwordEncoder.matches(request.password, existingUser.passwordHash)).thenReturn(true)
 
-            val updatedUser = existingUser.apply {
+            val persistedUser = createExistingUser().apply {
+                id = existingUser.id
                 lastLoginAt = Instant.now()
-                updatedAt = Instant.now()
+                updatedAt = Instant.now().plusSeconds(1)
             }
-            whenever(userRepository.saveAndFlush(any())).thenReturn(updatedUser)
+            whenever(userRepository.save(any())).thenReturn(persistedUser)
+
+            whenever(jwtService.generateAccessToken(any())).thenReturn("new.access.token")
+            whenever(refreshTokenManager.createRefreshToken(any(), isNull(), isNull()))
+                .thenReturn("new.refresh.token")
+            whenever(jwtService.accessTokenExpiration()).thenReturn(900L)
 
             // When
             val result = authService.login(request)
 
-            // Then - Verify Side Effect (The Input to DB)
+            // Then
+            // 1. Timestamp must be updated
             verify(userRepository)
-                .saveAndFlush(
-                    check {
+                .save(
+                    check<User> {
                         it.lastLoginAt.shouldNotBeNull() // Confirm service actually set timestamp before saving
-                        it.updatedAt.shouldNotBeNull() // Confirm service actually set timestamp before saving
                     },
                 )
 
-            // Then - Verify Return Value
+            // 2. Verify Event emitted
             val eventCaptor = argumentCaptor<UserLoginEvent>()
             verify(eventPublisher).publishEvent(eventCaptor.capture())
             eventCaptor.firstValue.user.email shouldBe request.email
 
+            // 3. Token generation
+            verify(jwtService).generateAccessToken(any())
+            verify(refreshTokenManager).createRefreshToken(
+                check {
+                    it.updatedAt shouldBe persistedUser.updatedAt
+                },
+                isNull(),
+                isNull(),
+            )
+
+            // 4. Response DTO correctness
+            result.accessToken shouldBe "new.access.token"
+            result.refreshToken shouldBe "new.refresh.token"
+            result.expiresIn shouldBe 900L
+            result.tokenType shouldBe "Bearer"
             result.authStatus shouldBe AuthStatus.VERIFIED
-            result.user.lastLoginAt shouldBe updatedUser.lastLoginAt
+
+            // 5. Response should contain the updated lastLoginAt
+            result.user.lastLoginAt shouldBe persistedUser.lastLoginAt
         }
 
         @Test

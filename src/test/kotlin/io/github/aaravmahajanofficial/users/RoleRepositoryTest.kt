@@ -13,12 +13,9 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.auth
+package io.github.aaravmahajanofficial.users
 
 import io.github.aaravmahajanofficial.TestcontainersConfiguration
-import io.github.aaravmahajanofficial.users.Role
-import io.github.aaravmahajanofficial.users.RoleRepository
-import io.github.aaravmahajanofficial.users.RoleType
 import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull

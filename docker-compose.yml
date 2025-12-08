@@ -17,6 +17,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+  redis:
+    image: redis:alpine3.22
+    container_name: mercuri_cache
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
 
 volumes:
   postgres_data:

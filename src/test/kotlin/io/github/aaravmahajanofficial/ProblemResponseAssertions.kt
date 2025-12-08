@@ -86,6 +86,17 @@ open class ProblemResponseAssertions {
         )
     }
 
+    fun assertInvalidToken(result: ResultActionsDsl, instance: String?) {
+        assertProblem(
+            result = result,
+            expectedType = "https://api.example.com/problems/invalid-token",
+            expectedTitle = "Invalid Token",
+            expectedDetail = "The provided token is invalid or has expired.",
+            expectedInstance = instance,
+            expectedStatus = HttpStatus.UNAUTHORIZED.value(),
+        )
+    }
+
     fun assertForbidden(result: ResultActionsDsl, title: String, detail: String, instance: String? = null) {
         assertProblem(
             result = result,

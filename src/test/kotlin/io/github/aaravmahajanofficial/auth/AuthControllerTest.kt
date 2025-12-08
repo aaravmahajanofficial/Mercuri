@@ -16,6 +16,7 @@
 package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.ProblemResponseAssertions
+import io.github.aaravmahajanofficial.auth.jwt.JwtService
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.login.LoginResponseDto
 import io.github.aaravmahajanofficial.auth.login.UserDto
@@ -54,8 +55,16 @@ import java.util.UUID
 
 @WebMvcTest(AuthController::class)
 @AutoConfigureMockMvc(addFilters = false)
-class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val objectMapper: ObjectMapper) :
-    ProblemResponseAssertions() {
+class AuthControllerTest : ProblemResponseAssertions() {
+
+    @Autowired
+    lateinit var mockMvc: MockMvc
+
+    @Autowired
+    lateinit var objectMapper: ObjectMapper
+
+    @MockitoBean
+    lateinit var jwtService: JwtService
 
     @MockitoBean
     lateinit var authService: AuthService
@@ -278,6 +287,8 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
             val serviceResponse = LoginResponseDto(
                 authStatus = AuthStatus.VERIFIED,
                 accessToken = "mock.jwt.token",
+                refreshToken = "mock.jwt.token",
+                tokenType = "Bearer",
                 expiresIn = 3600,
                 user = mockUser,
             )
@@ -298,6 +309,7 @@ class AuthControllerTest @Autowired constructor(val mockMvc: MockMvc, val object
 
                 jsonPath("$.data.authStatus") { value(serviceResponse.authStatus.value) }
                 jsonPath("$.data.accessToken") { value("mock.jwt.token") }
+                jsonPath("$.data.refreshToken") { value("mock.jwt.token") }
                 jsonPath("$.data.tokenType") { value("Bearer") }
                 jsonPath("$.data.expiresIn") { value(3600) }
 

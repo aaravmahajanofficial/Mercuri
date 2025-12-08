@@ -18,6 +18,9 @@ kotlin-logging = "7.0.13"
 kotest = "6.0.7"
 mockito-kotlin = "6.1.0"
 
+# Security
+jjwt = "0.13.0"
+
 [libraries]
 # Kotlin
 kotlin-logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlin-logging" }
@@ -25,6 +28,11 @@ kotlin-logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = 
 # Testing
 kotest = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin" }
+
+# Security
+jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
+jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
+jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

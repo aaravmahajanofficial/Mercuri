@@ -17,6 +17,7 @@ package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.TestcontainersConfiguration
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
+import io.github.aaravmahajanofficial.auth.token.RefreshTokenRepository
 import io.github.aaravmahajanofficial.users.Role
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
@@ -25,7 +26,6 @@ import io.github.aaravmahajanofficial.users.UserRepository
 import io.github.aaravmahajanofficial.users.UserStatus
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -35,129 +35,156 @@ import org.springframework.context.annotation.Import
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.reactive.server.WebTestClient
 import java.time.Instant
 
-@Import(TestcontainersConfiguration::class)
+@ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
+@Import(TestcontainersConfiguration::class)
 class LoginIntegrationTests @Autowired constructor(
     val webTestClient: WebTestClient,
     val roleRepository: RoleRepository,
     val userRepository: UserRepository,
     val passwordEncoder: PasswordEncoder,
+    val refreshTokenRepository: RefreshTokenRepository,
 ) {
-    private lateinit var activeUser: User
-    private lateinit var loginRequest: LoginRequestDto
-
     @BeforeEach
     fun setup() {
-        val customerRole =
-            roleRepository.findByName(RoleType.CUSTOMER) ?: roleRepository.save(Role(name = RoleType.CUSTOMER))
+        roleRepository.deleteAll()
+        userRepository.deleteAll()
+        refreshTokenRepository.deleteAll()
 
-        activeUser = User(
-            email = "valid.user@example.com",
-            passwordHash = passwordEncoder.encode("StrongP@ss1")!!,
-            firstName = "Test",
-            lastName = "User",
-            phoneNumber = "+1234567890",
-            phoneVerified = true,
-            emailVerified = true,
-            status = UserStatus.ACTIVE,
-            createdAt = Instant.now(),
-            updatedAt = Instant.now(),
-        ).apply { addRole(customerRole) }
+        roleRepository.saveAndFlush(Role(name = RoleType.CUSTOMER))
+    }
 
-        userRepository.saveAndFlush(activeUser)
+    private fun createUser(userStatus: UserStatus = UserStatus.ACTIVE, emailVerified: Boolean = true): User {
+        val customerRole = roleRepository.findByName(RoleType.CUSTOMER) ?: error("Customer role missing in DB")
 
-        loginRequest = LoginRequestDto(
-            email = activeUser.email,
-            password = "StrongP@ss1",
+        return userRepository.saveAndFlush(
+            User(
+                email = "valid.user@example.com",
+                passwordHash = passwordEncoder.encode("StrongP@ss1")!!,
+                firstName = "Test",
+                lastName = "User",
+                phoneNumber = "+1234567890",
+                phoneVerified = true,
+                emailVerified = emailVerified,
+                status = userStatus,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            ).apply { addRole(customerRole) },
         )
     }
 
-    @AfterEach
-    fun tearDown() {
-        userRepository.deleteAll()
-    }
+    private fun loginRequest(email: String = "valid.user@example.com", password: String = "StrongP@ss1") =
+        LoginRequestDto(
+            email = email,
+            password = password,
+        )
 
     @Test
     fun `should return 200 OK when login successful with valid email`() {
         // Given
+        createUser()
+
         // When
-        webTestClient.post().uri("/api/v1/auth/login")
+        val result = webTestClient.post().uri("/api/v1/auth/login")
             .contentType(APPLICATION_JSON)
-            .bodyValue(loginRequest)
-            .exchange().expectStatus().isEqualTo(HttpStatus.OK)
+            .bodyValue(loginRequest())
+            .exchange()
+
+        result.expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.data.accessToken").isNotEmpty
+            .jsonPath("$.data.refreshToken").isNotEmpty
+            .jsonPath("$.data.tokenType").isEqualTo("Bearer")
+            .jsonPath("$.data.expiresIn").isNumber
+            .jsonPath("$.data.authStatus").isEqualTo(AuthStatus.VERIFIED.value)
 
         // Then - DB State
-        val attemptedUser = userRepository.findByEmail(loginRequest.email)
-        attemptedUser?.lastLoginAt.shouldNotBeNull() // DB should be updated with login timestamp
+        // DB should be updated with login timestamp
+        userRepository.findByEmail(loginRequest().email)?.lastLoginAt.shouldNotBeNull()
     }
 
     @Test
-    fun `should fail with 401 on login with incorrect password`() {
+    fun `should return 401 on incorrect password`() {
         // Given
-        loginRequest = loginRequest.copy(password = "wrong-password")
+        val wrongRequest = loginRequest().copy(password = "wrong-password")
 
         // When
         webTestClient.post().uri("/api/v1/auth/login")
             .contentType(APPLICATION_JSON)
-            .bodyValue(loginRequest)
-            .exchange().expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED)
+            .bodyValue(wrongRequest)
+            .exchange().expectStatus().isUnauthorized
 
         // Then
-        val attemptedUser = userRepository.findByEmail(loginRequest.email)
-        attemptedUser?.lastLoginAt.shouldBeNull()
+        userRepository.findByEmail(wrongRequest.email)?.lastLoginAt.shouldBeNull()
     }
 
     @Test
-    fun `should fail with 401 on login with non-existent user`() {
+    fun `should return 401 when user does not exist`() {
         // Given
-        loginRequest = loginRequest.copy(email = "doesNotExist@example.com")
+        val wrongRequest = loginRequest().copy(email = "doesNotExist@example.com")
 
         // When
         webTestClient.post().uri("/api/v1/auth/login")
             .contentType(APPLICATION_JSON)
-            .bodyValue(loginRequest)
+            .bodyValue(wrongRequest)
             .exchange().expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED)
 
         // Then
-        val attemptedUser = userRepository.findByEmail(loginRequest.email)
-        attemptedUser.shouldBeNull() // A user should not be created upon failed login attempt
+        // A user should not be created upon failed login attempt
+        userRepository.findByEmail(wrongRequest.email).shouldBeNull()
     }
 
     @Test
     fun `should fail with 403 when user is suspended`() {
         // Given
-        activeUser.apply { status = UserStatus.SUSPENDED }
-        userRepository.saveAndFlush(activeUser)
+        createUser(UserStatus.SUSPENDED)
 
         // When
         webTestClient.post().uri("/api/v1/auth/login")
             .contentType(APPLICATION_JSON)
-            .bodyValue(loginRequest)
+            .bodyValue(loginRequest())
             .exchange().expectStatus().isEqualTo(HttpStatus.FORBIDDEN)
 
         // Then
-        val attemptedUser = userRepository.findByEmail(loginRequest.email)
-        attemptedUser?.lastLoginAt.shouldBeNull()
+        userRepository.findByEmail(loginRequest().email)?.lastLoginAt.shouldBeNull()
     }
 
     @Test
-    fun `should fail with 403 when user hasn't verified the email`() {
+    fun `should fail with 403 when email is not verified`() {
         // Given
-        activeUser.apply { emailVerified = false }
-        userRepository.saveAndFlush(activeUser)
+        createUser(emailVerified = false)
 
         // When
         webTestClient.post().uri("/api/v1/auth/login")
             .contentType(APPLICATION_JSON)
-            .bodyValue(loginRequest)
-            .exchange().expectStatus().isEqualTo(HttpStatus.FORBIDDEN)
+            .bodyValue(loginRequest())
+            .exchange().expectStatus().isForbidden
 
         // Then
-        val attemptedUser = userRepository.findByEmail(loginRequest.email)
-        attemptedUser?.lastLoginAt.shouldBeNull()
+        userRepository.findByEmail(loginRequest().email)?.lastLoginAt.shouldBeNull()
+    }
+
+    @Test
+    fun `should return 422 for invalid login input`() {
+        // Given
+        val request = loginRequest(
+            email = "not-valid",
+            password = "",
+        )
+
+        // When
+        webTestClient.post().uri("/api/v1/auth/login")
+            .contentType(APPLICATION_JSON)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT)
+
+        // Then
+        userRepository.findByEmail(loginRequest().email)?.lastLoginAt.shouldBeNull()
     }
 }
