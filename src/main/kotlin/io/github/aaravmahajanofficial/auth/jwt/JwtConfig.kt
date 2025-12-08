@@ -36,14 +36,4 @@ class JwtConfig {
             throw IllegalArgumentException("JWT Secret Key is not a valid Base64 string", e)
         }
     }
-
-    @Bean
-    fun refreshSecretKey(jwtProperties: JwtProperties): SecretKey {
-        try {
-            val keyBytes = Decoders.BASE64URL.decode(jwtProperties.refreshTokenSecretKey)
-            return Keys.hmacShaKeyFor(keyBytes)
-        } catch (e: IllegalArgumentException) {
-            throw IllegalArgumentException("Refresh Token Secret Key is not a valid Base64 string", e)
-        }
-    }
 }

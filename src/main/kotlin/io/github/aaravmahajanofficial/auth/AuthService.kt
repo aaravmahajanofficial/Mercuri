@@ -80,20 +80,19 @@ class AuthService(
 
     @Transactional
     fun login(requestBody: LoginRequestDto): LoginResponseDto {
-        val user = findUserByEmailOrThrow(requestBody)
+        val rawUser = findUserByEmailOrThrow(requestBody)
 
-        validatePasswordOrThrow(requestBody, user)
-        validateUserStatusOrThrow(user)
+        validatePasswordOrThrow(requestBody, rawUser)
+        validateUserStatusOrThrow(rawUser)
 
-        val updatedUser = updateLoginTimestamps(user)
+        val managedUser = updateLoginTimestamps(rawUser)
 
-        applicationEventPublisher.publishEvent(UserLoginEvent(updatedUser))
+        applicationEventPublisher.publishEvent(UserLoginEvent(managedUser))
 
         // Generate JWT Tokens
-        val tokenRequest = buildTokenRequest(updatedUser)
-
+        val tokenRequest = buildTokenRequest(managedUser)
         val accessToken = jwtService.generateAccessToken(tokenRequest)
-        val refreshToken = refreshTokenManager.createRefreshToken(user)
+        val refreshToken = refreshTokenManager.createRefreshToken(managedUser)
 
         return LoginResponseDto(
             accessToken = accessToken,
@@ -101,11 +100,13 @@ class AuthService(
             tokenType = "Bearer",
             expiresIn = jwtService.accessTokenExpiration(),
             authStatus = AuthStatus.VERIFIED,
-            user = updatedUser.toUserDto(),
+            user = managedUser.toUserDto(),
         )
     }
 
-    fun logout(principal: JwtAuthenticationPrincipal) {}
+    fun logout(principal: JwtAuthenticationPrincipal) {
+        // Will be implemented later
+    }
 
     private fun findUserByEmailOrThrow(requestBody: LoginRequestDto): User = (
         userRepository.findByEmail(requestBody.email)
@@ -114,8 +115,7 @@ class AuthService(
 
     private fun updateLoginTimestamps(user: User): User {
         user.lastLoginAt = Instant.now()
-        val updatedUser = userRepository.saveAndFlush(user)
-        return updatedUser
+        return userRepository.save(user)
     }
 
     private fun validatePasswordOrThrow(requestBody: LoginRequestDto, user: User) {

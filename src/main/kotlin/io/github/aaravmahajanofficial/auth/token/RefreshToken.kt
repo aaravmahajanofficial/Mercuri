@@ -62,6 +62,6 @@ class RefreshToken(
     var createdAt: Instant? = null,
 
     @UpdateTimestamp
-    @Column(name = "updated_at", columnDefinition = "TIMESTAMPTZ", nullable = false, updatable = false)
+    @Column(name = "updated_at", columnDefinition = "TIMESTAMPTZ", nullable = false)
     var updatedAt: Instant? = null,
 ) : BaseEntity()
