@@ -27,10 +27,10 @@ import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE
-import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -42,41 +42,29 @@ class AuthController(private val authService: AuthService) {
         consumes = [APPLICATION_JSON_VALUE],
         produces = [APPLICATION_JSON_VALUE, APPLICATION_PROBLEM_JSON_VALUE],
     )
-    fun register(
-        @Valid @RequestBody requestBody: RegisterRequestDto,
-    ): ResponseEntity<ApiResponse<RegisterResponseDto>> {
-        val user = authService.register(requestBody)
-        return ResponseEntity
-            .status(HttpStatus.CREATED)
-            .body(ApiResponse.Success(user))
-    }
+    @ResponseStatus(HttpStatus.CREATED)
+    fun register(@Valid @RequestBody requestBody: RegisterRequestDto): ApiResponse<RegisterResponseDto> =
+        ApiResponse.Success(authService.register(requestBody))
 
     @PostMapping(
         "/login",
         consumes = [APPLICATION_JSON_VALUE],
         produces = [APPLICATION_JSON_VALUE, APPLICATION_PROBLEM_JSON_VALUE],
     )
-    fun login(@Valid @RequestBody requestBody: LoginRequestDto): ResponseEntity<ApiResponse<LoginResponseDto>> {
-        val user = authService.login(requestBody)
-        return ResponseEntity.ok()
-            .body(ApiResponse.Success(user))
-    }
+    @ResponseStatus(HttpStatus.OK)
+    fun login(@Valid @RequestBody requestBody: LoginRequestDto): ApiResponse<LoginResponseDto> =
+        ApiResponse.Success(authService.login(requestBody))
 
     @PostMapping(
         "/refresh",
         consumes = [APPLICATION_JSON_VALUE],
         produces = [APPLICATION_JSON_VALUE, APPLICATION_PROBLEM_JSON_VALUE],
     )
-    fun refreshToken(
-        @Valid @RequestBody requestBody: RefreshTokenRequestDto,
-    ): ResponseEntity<ApiResponse<RefreshTokenResponseDto>> {
-        val response = authService.refreshAccessToken(requestBody)
-        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.Success(response))
-    }
+    @ResponseStatus(HttpStatus.OK)
+    fun refreshToken(@Valid @RequestBody requestBody: RefreshTokenRequestDto): ApiResponse<RefreshTokenResponseDto> =
+        ApiResponse.Success(authService.refreshAccessToken(requestBody))
 
     @PostMapping("/logout")
-    fun logout(@CurrentUser principal: JwtAuthenticationPrincipal): ResponseEntity<Unit> {
-        authService.logout(principal)
-        return ResponseEntity.noContent().build()
-    }
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun logout(@CurrentUser principal: JwtAuthenticationPrincipal) = authService.logout(principal)
 }
