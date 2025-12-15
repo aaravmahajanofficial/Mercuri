@@ -45,7 +45,6 @@ import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
-import org.springframework.http.MediaType
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.http.MediaType.APPLICATION_XML
@@ -73,16 +72,6 @@ class AuthControllerTest : ProblemResponseAssertions() {
 
     @MockitoBean
     lateinit var authService: AuthService
-
-    companion object {
-        fun createValidRegisterRequest(email: String = "john.doe@example.com") =
-            RegisterRequestDto(email, "SecureP@ss123", "John", "Doe", "+1234567890")
-
-        fun createMockUser(id: UUID = UUID.randomUUID(), email: String = "john.doe@example.com") = UserDto(
-            id, email, "John", "Doe", "+1234567890", true, true, UserStatus.ACTIVE, Instant.now(),
-            Instant.now(), listOf(RoleType.CUSTOMER),
-        )
-    }
 
     @Nested
     @DisplayName("POST /api/v1/auth/register")
@@ -273,6 +262,9 @@ class AuthControllerTest : ProblemResponseAssertions() {
 
             verify(authService, times(1)).register(any())
         }
+
+        private fun createValidRegisterRequest(email: String = "john.doe@example.com") =
+            RegisterRequestDto(email, "SecureP@ss123", "John", "Doe", "+1234567890")
     }
 
     @Nested
@@ -287,7 +279,7 @@ class AuthControllerTest : ProblemResponseAssertions() {
                 password = "StrongP@ss1",
             )
 
-            val mockUser = createMockUser(email = request.email!!)
+            val mockUser = createMockUser(email = request.email)
 
             val serviceResponse = LoginResponseDto(
                 authStatus = AuthStatus.VERIFIED,
@@ -492,6 +484,20 @@ class AuthControllerTest : ProblemResponseAssertions() {
 
             verify(authService, times(1)).login(any())
         }
+
+        private fun createMockUser(id: UUID = UUID.randomUUID(), email: String = "john.doe@example.com") = UserDto(
+            id = id,
+            email = email,
+            firstName = "John",
+            lastName = "Doe",
+            phoneNumber = "+1234567890",
+            emailVerified = true,
+            phoneVerified = true,
+            status = UserStatus.ACTIVE,
+            createdAt = Instant.now(),
+            lastLoginAt = Instant.now(),
+            roles = listOf(RoleType.CUSTOMER),
+        )
     }
 
     @Nested
@@ -508,15 +514,15 @@ class AuthControllerTest : ProblemResponseAssertions() {
 
             // When
             val result = mockMvc.post("/api/v1/auth/refresh") {
-                contentType = MediaType.APPLICATION_JSON
+                contentType = APPLICATION_JSON
                 content = objectMapper.writeValueAsString(request)
-                accept = MediaType.APPLICATION_JSON
+                accept = APPLICATION_JSON
             }
 
             // Then
             result.andExpect {
                 status { isOk() }
-                content { contentTypeCompatibleWith(MediaType.APPLICATION_JSON) }
+                content { contentTypeCompatibleWith(APPLICATION_JSON) }
                 jsonPath("$.data.accessToken") { value(serviceResponse.accessToken) }
                 jsonPath("$.data.refreshToken") { value(serviceResponse.refreshToken) }
                 jsonPath("$.data.tokenType") { value(serviceResponse.tokenType) }
@@ -539,9 +545,9 @@ class AuthControllerTest : ProblemResponseAssertions() {
 
             // When
             val result = mockMvc.post("/api/v1/auth/refresh") {
-                contentType = MediaType.APPLICATION_JSON
+                contentType = APPLICATION_JSON
                 content = objectMapper.writeValueAsString(request)
-                accept = MediaType.APPLICATION_JSON
+                accept = APPLICATION_JSON
             }
 
             // Then
@@ -557,9 +563,9 @@ class AuthControllerTest : ProblemResponseAssertions() {
 
             // When
             val result = mockMvc.post("/api/v1/auth/refresh") {
-                contentType = MediaType.APPLICATION_JSON
+                contentType = APPLICATION_JSON
                 content = objectMapper.writeValueAsString(request)
-                accept = MediaType.APPLICATION_JSON
+                accept = APPLICATION_JSON
             }
 
             // Then
@@ -580,9 +586,9 @@ class AuthControllerTest : ProblemResponseAssertions() {
 
             // When
             val result = mockMvc.post("/api/v1/auth/refresh") {
-                contentType = MediaType.APPLICATION_JSON
+                contentType = APPLICATION_JSON
                 content = objectMapper.writeValueAsString(request)
-                accept = MediaType.APPLICATION_JSON
+                accept = APPLICATION_JSON
             }
 
             // Then
@@ -601,9 +607,9 @@ class AuthControllerTest : ProblemResponseAssertions() {
 
             // When
             val result = mockMvc.post("/api/v1/auth/refresh") {
-                contentType = MediaType.APPLICATION_JSON
+                contentType = APPLICATION_JSON
                 content = objectMapper.writeValueAsString(request)
-                accept = MediaType.APPLICATION_JSON
+                accept = APPLICATION_JSON
             }
 
             // Then
