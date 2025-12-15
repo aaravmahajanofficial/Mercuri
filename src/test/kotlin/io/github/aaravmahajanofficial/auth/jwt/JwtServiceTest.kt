@@ -63,12 +63,6 @@ class JwtServiceTest {
         jwtService = JwtService(jwtProperties, secretKey)
     }
 
-    private fun createTokenRequest(
-        userID: UUID = UUID.randomUUID(),
-        email: String = "john.doe@example.com",
-        roles: Set<RoleType> = setOf(RoleType.CUSTOMER),
-    ) = TokenRequest(userID, email, roles)
-
     @Nested
     @DisplayName("Access Token Generation")
     inner class AccessTokenGeneration {
@@ -369,55 +363,9 @@ class JwtServiceTest {
         }
     }
 
-//    @Nested
-//    @DisplayName("Token Refresh")
-//    inner class TokenRefresh {
-//
-//        @Test
-//        fun `should generate new access token from valid refresh token`() {
-//            // Given
-//            val request = createTokenRequest()
-//            val refreshToken = jwtService.generateRefreshToken(request)
-//
-//            // When
-//            val newAccessToken = jwtService.refreshAccessToken(refreshToken, request.roles)
-//
-//            // Then
-//            newAccessToken.shouldNotBeEmpty()
-//        }
-//
-//        @Test
-//        fun `should throw exception when refreshing with expired token`() {
-//            // Given
-//            val shortLivedProperties = JwtProperties(
-//                secretKey = TEST_SECRET_KEY,
-//                refreshTokenSecretKey = TEST_SECRET_KEY,
-//                accessTokenExpiration = ACCESS_TOKEN_EXPIRATION,
-//                refreshTokenExpiration = -1000L,
-//            )
-//
-//            val shortJwtService = JwtService(shortLivedProperties, secretKey)
-//            val request = createTokenRequest()
-//            val refreshToken = shortJwtService.generateRefreshToken(request)
-//
-//            Thread.sleep(5)
-//
-//            // When & Then
-//            shouldThrow<InvalidTokenException> {
-//                shortJwtService.refreshAccessToken(refreshToken, request.roles)
-//            }
-//        }
-//
-//        @Test
-//        fun `should throw exception when refreshing with access token`() {
-//            // Given
-//            val request = createTokenRequest()
-//            val accessToken = jwtService.generateAccessToken(request)
-//
-//            // When & Then
-//            shouldThrow<InvalidTokenException> {
-//                jwtService.refreshAccessToken(accessToken, request.roles)
-//            }
-//        }
-//    }
+    private fun createTokenRequest(
+        userID: UUID = UUID.randomUUID(),
+        email: String = "john.doe@example.com",
+        roles: Set<RoleType> = setOf(RoleType.CUSTOMER),
+    ) = TokenRequest(userID, email, roles)
 }

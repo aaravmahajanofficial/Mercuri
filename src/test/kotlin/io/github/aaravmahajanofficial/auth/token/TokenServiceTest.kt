@@ -68,34 +68,6 @@ class TokenServiceTest {
         lenient().whenever(jwtProperties.accessTokenExpiration).thenReturn(900_000L)
     }
 
-    private fun createExistingUser(emailVerified: Boolean = true): User = User(
-        email = "john.doe@example.com",
-        passwordHash = "hashed_password",
-        firstName = "John",
-        lastName = "Doe",
-        phoneNumber = "+1234567890",
-        emailVerified = emailVerified,
-        phoneVerified = true,
-        status = UserStatus.ACTIVE,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    ).apply {
-        id = UUID.randomUUID()
-        addRole(Role(name = RoleType.CUSTOMER))
-    }
-
-    private fun createTokenValidationResult(email: String? = null) = TokenValidationResult(
-        isValid = true,
-        jti = UUID.randomUUID(),
-        userID = UUID.randomUUID(),
-        email = email,
-        roles = setOf(RoleType.CUSTOMER),
-    )
-
-    private fun createRefreshAccessTokenRequest(refreshToken: String) = RefreshTokenRequestDto(
-        refreshToken = refreshToken,
-    )
-
     @Test
     fun `should refresh token successfully and include latest user roles`() {
         // Given
@@ -244,4 +216,32 @@ class TokenServiceTest {
             tokenService.refreshAccessToken(createRefreshAccessTokenRequest(refreshToken))
         }
     }
+
+    private fun createExistingUser(emailVerified: Boolean = true): User = User(
+        email = "john.doe@example.com",
+        passwordHash = "hashed_password",
+        firstName = "John",
+        lastName = "Doe",
+        phoneNumber = "+1234567890",
+        emailVerified = emailVerified,
+        phoneVerified = true,
+        status = UserStatus.ACTIVE,
+        createdAt = Instant.now(),
+        updatedAt = Instant.now(),
+    ).apply {
+        id = UUID.randomUUID()
+        addRole(Role(name = RoleType.CUSTOMER))
+    }
+
+    private fun createTokenValidationResult(email: String? = null) = TokenValidationResult(
+        isValid = true,
+        jti = UUID.randomUUID(),
+        userID = UUID.randomUUID(),
+        email = email,
+        roles = setOf(RoleType.CUSTOMER),
+    )
+
+    private fun createRefreshAccessTokenRequest(refreshToken: String) = RefreshTokenRequestDto(
+        refreshToken = refreshToken,
+    )
 }
