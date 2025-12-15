@@ -59,31 +59,6 @@ class LoginIntegrationTests @Autowired constructor(
         roleRepository.saveAndFlush(Role(name = RoleType.CUSTOMER))
     }
 
-    private fun createUser(userStatus: UserStatus = UserStatus.ACTIVE, emailVerified: Boolean = true): User {
-        val customerRole = roleRepository.findByName(RoleType.CUSTOMER) ?: error("Customer role missing in DB")
-
-        return userRepository.saveAndFlush(
-            User(
-                email = "valid.user@example.com",
-                passwordHash = passwordEncoder.encode("StrongP@ss1")!!,
-                firstName = "Test",
-                lastName = "User",
-                phoneNumber = "+1234567890",
-                phoneVerified = true,
-                emailVerified = emailVerified,
-                status = userStatus,
-                createdAt = Instant.now(),
-                updatedAt = Instant.now(),
-            ).apply { addRole(customerRole) },
-        )
-    }
-
-    private fun loginRequest(email: String = "valid.user@example.com", password: String = "StrongP@ss1") =
-        LoginRequestDto(
-            email = email,
-            password = password,
-        )
-
     @Test
     fun `should return 200 OK when login successful with valid email`() {
         // Given
@@ -187,4 +162,29 @@ class LoginIntegrationTests @Autowired constructor(
         // Then
         userRepository.findByEmail(loginRequest().email)?.lastLoginAt.shouldBeNull()
     }
+
+    private fun createUser(userStatus: UserStatus = UserStatus.ACTIVE, emailVerified: Boolean = true): User {
+        val customerRole = roleRepository.findByName(RoleType.CUSTOMER) ?: error("Customer role missing in DB")
+
+        return userRepository.saveAndFlush(
+            User(
+                email = "valid.user@example.com",
+                passwordHash = passwordEncoder.encode("StrongP@ss1")!!,
+                firstName = "Test",
+                lastName = "User",
+                phoneNumber = "+1234567890",
+                phoneVerified = true,
+                emailVerified = emailVerified,
+                status = userStatus,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            ).apply { addRole(customerRole) },
+        )
+    }
+
+    private fun loginRequest(email: String = "valid.user@example.com", password: String = "StrongP@ss1") =
+        LoginRequestDto(
+            email = email,
+            password = password,
+        )
 }

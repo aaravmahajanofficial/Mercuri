@@ -28,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import java.util.Date
 import java.util.UUID
 import javax.crypto.SecretKey
 
@@ -61,12 +62,6 @@ class JwtServiceTest {
 
         jwtService = JwtService(jwtProperties, secretKey)
     }
-
-    private fun createTokenRequest(
-        userID: UUID = UUID.randomUUID(),
-        email: String = "john.doe@example.com",
-        roles: Set<RoleType> = setOf(RoleType.CUSTOMER),
-    ) = TokenRequest(userID, email, roles)
 
     @Nested
     @DisplayName("Access Token Generation")
@@ -181,6 +176,45 @@ class JwtServiceTest {
             // Then
             result.isValid shouldBe true
             result.userID shouldBe request.userID
+        }
+
+        @Test
+        fun `should reject token with missing email claim`() {
+            // Given
+            val accessToken = Jwts.builder()
+                .subject(UUID.randomUUID().toString())
+                .claim("type", TokenType.ACCESS.name)
+                .issuedAt(Date())
+                .expiration(Date(System.currentTimeMillis() + 60000))
+                .signWith(secretKey, Jwts.SIG.HS512)
+                .compact()
+
+            // When
+            val result = jwtService.validateToken(accessToken, TokenType.ACCESS)
+
+            // Then
+            result.isValid shouldBe false
+            result.error shouldBe TokenValidationError.MISSING_CLAIMS
+        }
+
+        @Test
+        fun `should reject token with invalid subject`() {
+            // Given
+            val accessToken = Jwts.builder()
+                .subject("not-a-uuid")
+                .claim("email", "john.doe@example.com")
+                .claim("type", TokenType.ACCESS.name)
+                .issuedAt(Date())
+                .expiration(Date(System.currentTimeMillis() + 60000))
+                .signWith(secretKey, Jwts.SIG.HS512)
+                .compact()
+
+            // When
+            val result = jwtService.validateToken(accessToken, TokenType.ACCESS)
+
+            // Then
+            result.isValid shouldBe false
+            result.error shouldBe TokenValidationError.MALFORMED
         }
 
         @Test
@@ -329,55 +363,9 @@ class JwtServiceTest {
         }
     }
 
-//    @Nested
-//    @DisplayName("Token Refresh")
-//    inner class TokenRefresh {
-//
-//        @Test
-//        fun `should generate new access token from valid refresh token`() {
-//            // Given
-//            val request = createTokenRequest()
-//            val refreshToken = jwtService.generateRefreshToken(request)
-//
-//            // When
-//            val newAccessToken = jwtService.refreshAccessToken(refreshToken, request.roles)
-//
-//            // Then
-//            newAccessToken.shouldNotBeEmpty()
-//        }
-//
-//        @Test
-//        fun `should throw exception when refreshing with expired token`() {
-//            // Given
-//            val shortLivedProperties = JwtProperties(
-//                secretKey = TEST_SECRET_KEY,
-//                refreshTokenSecretKey = TEST_SECRET_KEY,
-//                accessTokenExpiration = ACCESS_TOKEN_EXPIRATION,
-//                refreshTokenExpiration = -1000L,
-//            )
-//
-//            val shortJwtService = JwtService(shortLivedProperties, secretKey)
-//            val request = createTokenRequest()
-//            val refreshToken = shortJwtService.generateRefreshToken(request)
-//
-//            Thread.sleep(5)
-//
-//            // When & Then
-//            shouldThrow<InvalidTokenException> {
-//                shortJwtService.refreshAccessToken(refreshToken, request.roles)
-//            }
-//        }
-//
-//        @Test
-//        fun `should throw exception when refreshing with access token`() {
-//            // Given
-//            val request = createTokenRequest()
-//            val accessToken = jwtService.generateAccessToken(request)
-//
-//            // When & Then
-//            shouldThrow<InvalidTokenException> {
-//                jwtService.refreshAccessToken(accessToken, request.roles)
-//            }
-//        }
-//    }
+    private fun createTokenRequest(
+        userID: UUID = UUID.randomUUID(),
+        email: String = "john.doe@example.com",
+        roles: Set<RoleType> = setOf(RoleType.CUSTOMER),
+    ) = TokenRequest(userID, email, roles)
 }

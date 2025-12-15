@@ -81,37 +81,6 @@ class AuthServiceTest {
     @InjectMocks
     lateinit var authService: AuthService
 
-    private fun createRegisterRequest() = RegisterRequestDto(
-        email = "john.doe@example.com",
-        password = "StrongP@ss123!",
-        firstName = "John",
-        lastName = "Doe",
-        phoneNumber = "+1234567890",
-    )
-
-    private fun createLoginRequest() = LoginRequestDto(
-        email = "john.doe@example.com",
-        password = "StrongP@ss123!",
-    )
-
-    private fun createCustomerRole() = Role(name = RoleType.CUSTOMER)
-
-    private fun createExistingUser(status: UserStatus = UserStatus.ACTIVE, emailVerified: Boolean = true): User = User(
-        email = "john.doe@example.com",
-        passwordHash = "hashed_password",
-        firstName = "John",
-        lastName = "Doe",
-        phoneNumber = "+1234567890",
-        emailVerified = emailVerified,
-        phoneVerified = true,
-        status = status,
-        createdAt = Instant.now(),
-        updatedAt = Instant.now(),
-    ).apply {
-        id = UUID.randomUUID()
-        addRole(createCustomerRole())
-    }
-
     @Nested
     inner class Registration {
         @Test
@@ -286,5 +255,36 @@ class AuthServiceTest {
 
             shouldThrow<EmailNotVerifiedException> { authService.login(request) }
         }
+    }
+
+    private fun createRegisterRequest() = RegisterRequestDto(
+        email = "john.doe@example.com",
+        password = "StrongP@ss123!",
+        firstName = "John",
+        lastName = "Doe",
+        phoneNumber = "+1234567890",
+    )
+
+    private fun createLoginRequest() = LoginRequestDto(
+        email = "john.doe@example.com",
+        password = "StrongP@ss123!",
+    )
+
+    private fun createCustomerRole() = Role(name = RoleType.CUSTOMER)
+
+    private fun createExistingUser(status: UserStatus = UserStatus.ACTIVE, emailVerified: Boolean = true): User = User(
+        email = "john.doe@example.com",
+        passwordHash = "hashed_password",
+        firstName = "John",
+        lastName = "Doe",
+        phoneNumber = "+1234567890",
+        emailVerified = emailVerified,
+        phoneVerified = true,
+        status = status,
+        createdAt = Instant.now(),
+        updatedAt = Instant.now(),
+    ).apply {
+        id = UUID.randomUUID()
+        addRole(createCustomerRole())
     }
 }

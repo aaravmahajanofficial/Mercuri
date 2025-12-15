@@ -51,8 +51,6 @@ class TokenControllerTest : ProblemResponseAssertions() {
     @MockitoBean
     lateinit var tokenService: TokenService
 
-    private fun createRefreshTokenRequest(refreshToken: String) = RefreshTokenRequestDto(refreshToken)
-
     @Nested
     @DisplayName("POST /api/v1/auth/token/refresh")
     inner class RefreshToken {
@@ -169,4 +167,6 @@ class TokenControllerTest : ProblemResponseAssertions() {
             assertUnprocessableContent(result, "/api/v1/auth/token/refresh")
         }
     }
+
+    private fun createRefreshTokenRequest(refreshToken: String) = RefreshTokenRequestDto(refreshToken)
 }

@@ -35,7 +35,7 @@ import java.util.UUID
 @Table(name = "refresh_tokens")
 class RefreshToken(
     @Column(nullable = false, unique = true)
-    var jti: UUID = UUID.randomUUID(),
+    var jti: UUID,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

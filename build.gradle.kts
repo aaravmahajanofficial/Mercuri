@@ -13,6 +13,9 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
+import kotlinx.kover.gradle.plugin.dsl.AggregationType
+import kotlinx.kover.gradle.plugin.dsl.CoverageUnit
+
 plugins {
     base
     alias(libs.plugins.kotlin.jvm)
@@ -20,6 +23,7 @@ plugins {
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.spring.dependency.management)
     alias(libs.plugins.kotlin.jpa)
+    alias(libs.plugins.kover)
 
     id("quality-conventions")
 }
@@ -77,6 +81,51 @@ allOpen {
     annotation("jakarta.persistence.Entity")
     annotation("jakarta.persistence.MappedSuperclass")
     annotation("jakarta.persistence.Embeddable")
+}
+
+kover {
+    reports {
+        filters {
+            excludes {
+                classes("io.github.aaravmahajanofficial.ApplicationKt")
+                classes("io.github.aaravmahajanofficial.config.*")
+                classes(
+                    "*Dto",
+                    "io.github.aaravmahajanofficial.common.ApiResponse*",
+                )
+                classes("io.github.aaravmahajanofficial.common.exception.*")
+                classes("io.github.aaravmahajanofficial.db.migration.*")
+            }
+        }
+        verify {
+            rule("Minimum Line Coverage") {
+                bound {
+                    minValue = 80
+                    coverageUnits = CoverageUnit.LINE
+                    aggregationForGroup = AggregationType.COVERED_PERCENTAGE
+                }
+            }
+
+            rule("Branch Coverage") {
+                bound {
+                    minValue = 68
+                    coverageUnits = CoverageUnit.BRANCH
+                    aggregationForGroup = AggregationType.COVERED_PERCENTAGE
+                }
+            }
+
+            // Would be implemented later
+//            rule("Per-Class") {
+//                groupBy = GroupingEntityType.CLASS
+//
+//                bound {
+//                    minValue = 70
+//                    coverageUnits = CoverageUnit.LINE
+//                    aggregationForGroup = AggregationType.COVERED_PERCENTAGE
+//                }
+//            }
+        }
+    }
 }
 
 tasks.withType<Test> {
