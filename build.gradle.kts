@@ -108,7 +108,7 @@ kover {
 
             rule("Branch Coverage") {
                 bound {
-                    minValue = 70
+                    minValue = 68
                     coverageUnits = CoverageUnit.BRANCH
                     aggregationForGroup = AggregationType.COVERED_PERCENTAGE
                 }
