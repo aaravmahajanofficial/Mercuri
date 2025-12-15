@@ -17,6 +17,7 @@ kotlin-logging = "7.0.13"
 # Testing
 kotest = "6.0.7"
 mockito-kotlin = "6.1.0"
+kover = "0.9.4"
 
 # Security
 jjwt = "0.13.0"
@@ -46,3 +47,6 @@ spring-dependency-management = { id = "io.spring.dependency-management", version
 # Quality
 detekt = { id = "dev.detekt", version.ref = "detekt" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+
+# Testing
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }

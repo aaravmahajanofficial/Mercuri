@@ -32,7 +32,6 @@ import javax.crypto.SecretKey
 
 @Service
 class JwtService(private val jwtProperties: JwtProperties, private val secretKey: SecretKey) {
-
     private val logger = LoggerFactory.getLogger(JwtService::class.java)
 
     companion object {
