@@ -45,7 +45,7 @@ class SecurityConfig {
             .exceptionHandling { exceptionConfig -> exceptionConfig.authenticationEntryPoint(authenticationEntryPoint) }
             .authorizeHttpRequests { auth ->
                 auth
-                    .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/token/refresh")
+                    .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh")
                     .permitAll()
                     .anyRequest() // all other endpoints require proper authentication
                     .authenticated()

@@ -20,6 +20,8 @@ import io.github.aaravmahajanofficial.auth.events.UserRegisterEvent
 import io.github.aaravmahajanofficial.auth.jwt.JwtAuthenticationPrincipal
 import io.github.aaravmahajanofficial.auth.jwt.JwtService
 import io.github.aaravmahajanofficial.auth.jwt.TokenRequest
+import io.github.aaravmahajanofficial.auth.jwt.TokenType
+import io.github.aaravmahajanofficial.auth.jwt.TokenValidationError
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.login.LoginResponseDto
 import io.github.aaravmahajanofficial.auth.mappers.toRegisterResponse
@@ -28,10 +30,14 @@ import io.github.aaravmahajanofficial.auth.mappers.toUserDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenManager
+import io.github.aaravmahajanofficial.auth.token.RefreshTokenRequestDto
+import io.github.aaravmahajanofficial.auth.token.RefreshTokenResponseDto
 import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
 import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
 import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
+import io.github.aaravmahajanofficial.common.exception.InvalidTokenException
 import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
+import io.github.aaravmahajanofficial.config.JwtProperties
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
 import io.github.aaravmahajanofficial.users.User
@@ -51,6 +57,7 @@ class AuthService(
     private val roleRepository: RoleRepository,
     private val applicationEventPublisher: ApplicationEventPublisher,
     private val jwtService: JwtService,
+    private val jwtProperties: JwtProperties,
     private val refreshTokenManager: RefreshTokenManager,
 ) {
 
@@ -101,6 +108,53 @@ class AuthService(
             expiresIn = jwtService.accessTokenExpiration(),
             authStatus = AuthStatus.VERIFIED,
             user = managedUser.toUserDto(),
+        )
+    }
+
+    fun refreshAccessToken(request: RefreshTokenRequestDto): RefreshTokenResponseDto {
+        // 1. Basic JWT Validation (Signature + Expiration)
+        val validationResult = jwtService.validateToken(request.refreshToken, TokenType.REFRESH)
+        if (!validationResult.isValid || validationResult.jti == null) {
+            throw InvalidTokenException("Invalid refresh token", validationResult.error)
+        }
+
+        val jti = validationResult.jti
+
+        // 2. Check State
+        if (!refreshTokenManager.isTokenValid(jti)) {
+            throw InvalidTokenException(
+                "Refresh token has been revoked or is invalid",
+                TokenValidationError.INVALID_SIGNATURE,
+            )
+        }
+
+        // 3. Verify User
+        val email = validationResult.email ?: throw InvalidTokenException(
+            "Missing email claim",
+            TokenValidationError.MISSING_CLAIMS,
+        )
+
+        val user = userRepository.findByEmail(email) ?: throw InvalidTokenException(
+            "User not found",
+            TokenValidationError.MISSING_CLAIMS,
+        )
+
+        when {
+            !user.emailVerified -> throw EmailNotVerifiedException()
+            user.status == UserStatus.SUSPENDED -> throw AccountSuspendedException()
+        }
+
+        // 4. Revoke old refresh token, create new one
+        val newRefreshToken = refreshTokenManager.rotateRefreshToken(jti, user)
+
+        // 5. Create new Access Token
+        val tokenRequest = TokenRequest(user.id!!, user.email, user.roles.map { it.name }.toSet())
+        val newAccessToken = jwtService.generateAccessToken(tokenRequest)
+
+        return RefreshTokenResponseDto(
+            accessToken = newAccessToken,
+            refreshToken = newRefreshToken,
+            expiresIn = jwtProperties.accessTokenExpiration / 1000,
         )
     }
 

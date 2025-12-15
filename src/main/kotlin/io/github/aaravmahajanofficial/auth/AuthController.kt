@@ -20,6 +20,8 @@ import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.login.LoginResponseDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
+import io.github.aaravmahajanofficial.auth.token.RefreshTokenRequestDto
+import io.github.aaravmahajanofficial.auth.token.RefreshTokenResponseDto
 import io.github.aaravmahajanofficial.common.ApiResponse
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -58,6 +60,18 @@ class AuthController(private val authService: AuthService) {
         val user = authService.login(requestBody)
         return ResponseEntity.ok()
             .body(ApiResponse.Success(user))
+    }
+
+    @PostMapping(
+        "/refresh",
+        consumes = [APPLICATION_JSON_VALUE],
+        produces = [APPLICATION_JSON_VALUE, APPLICATION_PROBLEM_JSON_VALUE],
+    )
+    fun refreshToken(
+        @Valid @RequestBody requestBody: RefreshTokenRequestDto,
+    ): ResponseEntity<ApiResponse<RefreshTokenResponseDto>> {
+        val response = authService.refreshAccessToken(requestBody)
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.Success(response))
     }
 
     @PostMapping("/logout")
