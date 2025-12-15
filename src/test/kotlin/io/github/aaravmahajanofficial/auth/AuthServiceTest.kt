@@ -18,13 +18,19 @@ package io.github.aaravmahajanofficial.auth
 import io.github.aaravmahajanofficial.auth.events.UserLoginEvent
 import io.github.aaravmahajanofficial.auth.events.UserRegisterEvent
 import io.github.aaravmahajanofficial.auth.jwt.JwtService
+import io.github.aaravmahajanofficial.auth.jwt.TokenType
+import io.github.aaravmahajanofficial.auth.jwt.TokenValidationError
+import io.github.aaravmahajanofficial.auth.jwt.TokenValidationResult
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenManager
+import io.github.aaravmahajanofficial.auth.token.RefreshTokenRequestDto
 import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
 import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
 import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
+import io.github.aaravmahajanofficial.common.exception.InvalidTokenException
 import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
+import io.github.aaravmahajanofficial.config.JwtProperties
 import io.github.aaravmahajanofficial.users.Role
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
@@ -33,14 +39,17 @@ import io.github.aaravmahajanofficial.users.UserRepository
 import io.github.aaravmahajanofficial.users.UserStatus
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
 import org.mockito.Mock
+import org.mockito.Mockito.lenient
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
@@ -77,6 +86,9 @@ class AuthServiceTest {
 
     @Mock
     lateinit var refreshTokenManager: RefreshTokenManager
+
+    @Mock
+    lateinit var jwtProperties: JwtProperties
 
     @InjectMocks
     lateinit var authService: AuthService
@@ -149,6 +161,14 @@ class AuthServiceTest {
 
             shouldThrow<DefaultRoleNotFoundException> { authService.register(request) }
         }
+
+        private fun createRegisterRequest() = RegisterRequestDto(
+            email = "john.doe@example.com",
+            password = "StrongP@ss123!",
+            firstName = "John",
+            lastName = "Doe",
+            phoneNumber = "+1234567890",
+        )
     }
 
     @Nested
@@ -255,20 +275,200 @@ class AuthServiceTest {
 
             shouldThrow<EmailNotVerifiedException> { authService.login(request) }
         }
+
+        private fun createLoginRequest() = LoginRequestDto(
+            email = "john.doe@example.com",
+            password = "StrongP@ss123!",
+        )
     }
 
-    private fun createRegisterRequest() = RegisterRequestDto(
-        email = "john.doe@example.com",
-        password = "StrongP@ss123!",
-        firstName = "John",
-        lastName = "Doe",
-        phoneNumber = "+1234567890",
-    )
+    @Nested
+    inner class Refresh {
 
-    private fun createLoginRequest() = LoginRequestDto(
-        email = "john.doe@example.com",
-        password = "StrongP@ss123!",
-    )
+        @BeforeEach
+        fun setUp() {
+            lenient().whenever(jwtProperties.accessTokenExpiration).thenReturn(900_000L)
+        }
+
+        @Test
+        fun `should refresh token successfully and include latest user roles`() {
+            // Given
+            val refreshToken = "valid.refresh.token"
+            val newAccessToken = "new.access.token"
+            val newRefreshToken = "new.refresh.token"
+            val user = createExistingUser().apply {
+                addRole(Role(RoleType.SELLER))
+            }
+
+            whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
+                createTokenValidationResult(user.email),
+            )
+            whenever(refreshTokenManager.isTokenValid(any())).thenReturn(true)
+            whenever(userRepository.findByEmail(user.email)).thenReturn(user)
+            whenever(refreshTokenManager.rotateRefreshToken(any(), any())).thenReturn(newRefreshToken)
+            whenever(jwtService.generateAccessToken(any())).thenReturn(newAccessToken)
+
+            // When
+            val result = authService.refreshAccessToken(createRefreshAccessTokenRequest(refreshToken))
+
+            // Then
+            result.accessToken shouldBe newAccessToken
+            result.expiresIn shouldBe 900L
+
+            // Verify the new token was created using user's updated roles from DB
+            verify(jwtService).generateAccessToken(
+                check {
+                    it.roles shouldContainExactlyInAnyOrder setOf(RoleType.CUSTOMER, RoleType.SELLER)
+                },
+            )
+        }
+
+        @Test
+        fun `should throw InvalidTokenException on revoked or invalid token`() {
+            // Given
+            val refreshToken = "revoked.refresh.token"
+
+            whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
+                createTokenValidationResult(),
+            )
+            whenever(refreshTokenManager.isTokenValid(any())).thenReturn(false)
+
+            // When & Then
+            val exception =
+                shouldThrow<InvalidTokenException> {
+                    authService.refreshAccessToken(
+                        createRefreshAccessTokenRequest(refreshToken),
+                    )
+                }
+
+            exception.error shouldBe TokenValidationError.INVALID_SIGNATURE
+        }
+
+        @Test
+        fun `should throw InvalidTokenException when token validation fails`() {
+            // Given
+            val refreshToken = "invalid.token"
+
+            whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
+                TokenValidationResult.invalid(
+                    TokenValidationError.INVALID_SIGNATURE,
+                ),
+            )
+
+            // When & Then
+            val exception =
+                shouldThrow<InvalidTokenException> {
+                    authService.refreshAccessToken(
+                        createRefreshAccessTokenRequest(refreshToken),
+                    )
+                }
+
+            exception.message shouldBe "Invalid refresh token"
+            exception.error shouldBe TokenValidationError.INVALID_SIGNATURE
+        }
+
+        @Test
+        fun `should throw InvalidTokenException when email claim is missing`() {
+            // Given
+            val refreshToken = "valid.token.no.email"
+
+            whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
+                createTokenValidationResult(email = null),
+            )
+            whenever(refreshTokenManager.isTokenValid(any())).thenReturn(true)
+
+            // When & Then
+            val exception = shouldThrow<InvalidTokenException> {
+                authService.refreshAccessToken(createRefreshAccessTokenRequest(refreshToken))
+            }
+            exception.message shouldBe "Missing email claim"
+            exception.error shouldBe TokenValidationError.MISSING_CLAIMS
+        }
+
+        @Test
+        fun `should throw InvalidTokenException when user does not exist`() {
+            // Given
+            val refreshToken = "valid.access.token"
+            val userEmail = "unknown@example.com"
+
+            whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
+                createTokenValidationResult(userEmail),
+            )
+            whenever(refreshTokenManager.isTokenValid(any())).thenReturn(true)
+            whenever(userRepository.findByEmail(userEmail)).thenReturn(null)
+
+            // When & Then
+            val exception = shouldThrow<InvalidTokenException> {
+                authService.refreshAccessToken(createRefreshAccessTokenRequest(refreshToken))
+            }
+            exception.message shouldBe "User not found"
+            exception.error shouldBe TokenValidationError.MISSING_CLAIMS
+        }
+
+        @Test
+        fun `should throw EmailNotVerifiedException when user email is not verified`() {
+            // Given
+            val refreshToken = "valid.refresh.token"
+            val user = createExistingUser(emailVerified = false)
+
+            whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
+                createTokenValidationResult(user.email),
+            )
+            whenever(refreshTokenManager.isTokenValid(any())).thenReturn(true)
+            whenever(userRepository.findByEmail(user.email)).thenReturn(user)
+
+            // When & Then
+            shouldThrow<EmailNotVerifiedException> {
+                authService.refreshAccessToken(createRefreshAccessTokenRequest(refreshToken))
+            }
+        }
+
+        @Test
+        fun `should throw AccountSuspendedException when user account is suspended`() {
+            // Given
+            val refreshToken = "valid.refresh.token"
+            val user = createExistingUser().apply { status = UserStatus.SUSPENDED }
+
+            whenever(jwtService.validateToken(refreshToken, TokenType.REFRESH)).thenReturn(
+                createTokenValidationResult(user.email),
+            )
+            whenever(refreshTokenManager.isTokenValid(any())).thenReturn(true)
+            whenever(userRepository.findByEmail(user.email)).thenReturn(user)
+
+            // When & Then
+            shouldThrow<AccountSuspendedException> {
+                authService.refreshAccessToken(createRefreshAccessTokenRequest(refreshToken))
+            }
+        }
+
+        private fun createExistingUser(emailVerified: Boolean = true): User = User(
+            email = "john.doe@example.com",
+            passwordHash = "hashed_password",
+            firstName = "John",
+            lastName = "Doe",
+            phoneNumber = "+1234567890",
+            emailVerified = emailVerified,
+            phoneVerified = true,
+            status = UserStatus.ACTIVE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        ).apply {
+            id = UUID.randomUUID()
+            addRole(Role(name = RoleType.CUSTOMER))
+        }
+
+        private fun createTokenValidationResult(email: String? = null) = TokenValidationResult(
+            isValid = true,
+            jti = UUID.randomUUID(),
+            userID = UUID.randomUUID(),
+            email = email,
+            roles = setOf(RoleType.CUSTOMER),
+        )
+
+        private fun createRefreshAccessTokenRequest(refreshToken: String) = RefreshTokenRequestDto(
+            refreshToken = refreshToken,
+        )
+    }
 
     private fun createCustomerRole() = Role(name = RoleType.CUSTOMER)
 

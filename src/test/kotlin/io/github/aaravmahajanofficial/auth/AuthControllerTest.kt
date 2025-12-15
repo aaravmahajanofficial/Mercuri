@@ -17,13 +17,17 @@ package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.ProblemResponseAssertions
 import io.github.aaravmahajanofficial.auth.jwt.JwtService
+import io.github.aaravmahajanofficial.auth.jwt.TokenValidationError
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.login.LoginResponseDto
 import io.github.aaravmahajanofficial.auth.login.UserDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
+import io.github.aaravmahajanofficial.auth.token.RefreshTokenRequestDto
+import io.github.aaravmahajanofficial.auth.token.RefreshTokenResponseDto
 import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
 import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
+import io.github.aaravmahajanofficial.common.exception.InvalidTokenException
 import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
 import io.github.aaravmahajanofficial.users.RoleType
 import io.github.aaravmahajanofficial.users.UserStatus
@@ -41,6 +45,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
+import org.springframework.http.MediaType
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.http.MediaType.APPLICATION_XML
@@ -488,4 +493,123 @@ class AuthControllerTest : ProblemResponseAssertions() {
             verify(authService, times(1)).login(any())
         }
     }
+
+    @Nested
+    @DisplayName("POST /api/v1/auth/refresh")
+    inner class RefreshToken {
+
+        @Test
+        fun `should return 200 OK with new access token`() {
+            // Given
+            val request = createRefreshTokenRequest("new.refresh.token")
+            val serviceResponse = RefreshTokenResponseDto("new.access.token", "Bearer", "new.refresh.token", 900)
+
+            whenever(authService.refreshAccessToken(any())).thenReturn(serviceResponse)
+
+            // When
+            val result = mockMvc.post("/api/v1/auth/refresh") {
+                contentType = MediaType.APPLICATION_JSON
+                content = objectMapper.writeValueAsString(request)
+                accept = MediaType.APPLICATION_JSON
+            }
+
+            // Then
+            result.andExpect {
+                status { isOk() }
+                content { contentTypeCompatibleWith(MediaType.APPLICATION_JSON) }
+                jsonPath("$.data.accessToken") { value(serviceResponse.accessToken) }
+                jsonPath("$.data.refreshToken") { value(serviceResponse.refreshToken) }
+                jsonPath("$.data.tokenType") { value(serviceResponse.tokenType) }
+                jsonPath("$.data.expiresIn") { value(serviceResponse.expiresIn) }
+                jsonPath("$.meta.timestamp") { exists() }
+            }
+        }
+
+        @Test
+        fun `should return 401 Unauthorized when refresh token is invalid or expired`() {
+            // Given
+            val request = createRefreshTokenRequest("expired.refresh.token")
+
+            whenever(authService.refreshAccessToken(any())).thenThrow(
+                InvalidTokenException(
+                    "Token expired",
+                    TokenValidationError.EXPIRED,
+                ),
+            )
+
+            // When
+            val result = mockMvc.post("/api/v1/auth/refresh") {
+                contentType = MediaType.APPLICATION_JSON
+                content = objectMapper.writeValueAsString(request)
+                accept = MediaType.APPLICATION_JSON
+            }
+
+            // Then
+            assertInvalidToken(result, "/api/v1/auth/refresh")
+        }
+
+        @Test
+        fun `should return 403 Forbidden when user account is suspended`() {
+            // Given
+            val request = createRefreshTokenRequest("valid.jwt.token")
+
+            whenever(authService.refreshAccessToken(any())).thenThrow(AccountSuspendedException())
+
+            // When
+            val result = mockMvc.post("/api/v1/auth/refresh") {
+                contentType = MediaType.APPLICATION_JSON
+                content = objectMapper.writeValueAsString(request)
+                accept = MediaType.APPLICATION_JSON
+            }
+
+            // Then
+            assertForbidden(
+                result = result,
+                title = "Account Suspended",
+                detail = "Your account is currently suspended. Please contact support.",
+                instance = "/api/v1/auth/refresh",
+            )
+        }
+
+        @Test
+        fun `should return 403 Forbidden when email is not verified`() {
+            // Given
+            val request = createRefreshTokenRequest("valid.jwt.token")
+
+            whenever(authService.refreshAccessToken(any())).thenThrow(EmailNotVerifiedException())
+
+            // When
+            val result = mockMvc.post("/api/v1/auth/refresh") {
+                contentType = MediaType.APPLICATION_JSON
+                content = objectMapper.writeValueAsString(request)
+                accept = MediaType.APPLICATION_JSON
+            }
+
+            // Then
+            assertForbidden(
+                result = result,
+                title = "Email Not Verified",
+                detail = "You must verify your email address before logging in.",
+                instance = "/api/v1/auth/refresh",
+            )
+        }
+
+        @Test
+        fun `should return 422 Unprocessable Content when refresh token is blank`() {
+            // Given
+            val request = createRefreshTokenRequest("")
+
+            // When
+            val result = mockMvc.post("/api/v1/auth/refresh") {
+                contentType = MediaType.APPLICATION_JSON
+                content = objectMapper.writeValueAsString(request)
+                accept = MediaType.APPLICATION_JSON
+            }
+
+            // Then
+            assertUnprocessableContent(result, "/api/v1/auth/refresh")
+        }
+    }
+
+    private fun createRefreshTokenRequest(refreshToken: String) = RefreshTokenRequestDto(refreshToken)
 }
