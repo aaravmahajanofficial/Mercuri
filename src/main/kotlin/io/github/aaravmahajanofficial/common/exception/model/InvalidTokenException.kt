@@ -13,6 +13,9 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.common.exception
+package io.github.aaravmahajanofficial.common.exception.model
 
-open class EmailNotVerifiedException : RuntimeException("Email address is not verified.")
+import io.github.aaravmahajanofficial.auth.jwt.TokenValidationError
+
+open class InvalidTokenException(message: String, val error: TokenValidationError? = null, cause: Throwable? = null) :
+    RuntimeException(message, cause)

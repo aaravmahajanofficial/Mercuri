@@ -145,12 +145,17 @@ open class ProblemResponseAssertions {
         )
     }
 
-    fun assertInternalServerError(result: ResultActionsDsl, title: String, instance: String? = null) {
+    fun assertInternalServerError(
+        result: ResultActionsDsl,
+        title: String,
+        detail: String = "An unexpected error occurred.",
+        instance: String? = null,
+    ) {
         assertProblem(
             result = result,
             expectedType = "https://api.example.com/problems/internal-server-error",
             expectedTitle = title,
-            expectedDetail = "An unexpected error occurred.",
+            expectedDetail = detail,
             expectedInstance = instance,
             expectedStatus = HttpStatus.INTERNAL_SERVER_ERROR.value(),
         )

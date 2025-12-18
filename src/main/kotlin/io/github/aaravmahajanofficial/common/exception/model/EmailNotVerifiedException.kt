@@ -13,6 +13,6 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.common.exception
+package io.github.aaravmahajanofficial.common.exception.model
 
-open class AccountSuspendedException : RuntimeException("Your account has been suspended.")
+open class EmailNotVerifiedException : RuntimeException("Email address is not verified.")

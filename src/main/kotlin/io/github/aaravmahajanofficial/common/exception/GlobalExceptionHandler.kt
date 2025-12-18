@@ -16,6 +16,11 @@
 package io.github.aaravmahajanofficial.common.exception
 
 import io.github.aaravmahajanofficial.common.LogSanitizer.sanitizeLogInput
+import io.github.aaravmahajanofficial.common.exception.model.AccountSuspendedException
+import io.github.aaravmahajanofficial.common.exception.model.DefaultRoleNotFoundException
+import io.github.aaravmahajanofficial.common.exception.model.EmailNotVerifiedException
+import io.github.aaravmahajanofficial.common.exception.model.InvalidTokenException
+import io.github.aaravmahajanofficial.common.exception.model.UserAlreadyExistsException
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus

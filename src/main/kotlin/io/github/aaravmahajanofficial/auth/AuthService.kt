@@ -32,11 +32,11 @@ import io.github.aaravmahajanofficial.auth.token.RefreshTokenManager
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenRequestDto
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenResponseDto
 import io.github.aaravmahajanofficial.auth.token.TokenBlacklistService
-import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
-import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
-import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
-import io.github.aaravmahajanofficial.common.exception.InvalidTokenException
-import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
+import io.github.aaravmahajanofficial.common.exception.model.AccountSuspendedException
+import io.github.aaravmahajanofficial.common.exception.model.DefaultRoleNotFoundException
+import io.github.aaravmahajanofficial.common.exception.model.EmailNotVerifiedException
+import io.github.aaravmahajanofficial.common.exception.model.InvalidTokenException
+import io.github.aaravmahajanofficial.common.exception.model.UserAlreadyExistsException
 import io.github.aaravmahajanofficial.config.JwtProperties
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
