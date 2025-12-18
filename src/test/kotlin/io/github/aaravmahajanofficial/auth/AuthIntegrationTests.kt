@@ -33,7 +33,6 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -43,7 +42,6 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
 import org.springframework.context.annotation.Import
 import org.springframework.http.HttpStatus
-import org.springframework.http.MediaType
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -66,14 +64,11 @@ class AuthIntegrationTests @Autowired constructor(
 ) {
     @BeforeEach
     fun setup() {
-        roleRepository.saveAndFlush(Role(name = RoleType.CUSTOMER))
-    }
-
-    @AfterEach
-    fun tearDown() {
         userRepository.deleteAll()
         roleRepository.deleteAll()
         refreshTokenRepository.deleteAll()
+
+        roleRepository.saveAndFlush(Role(name = RoleType.CUSTOMER))
     }
 
     @Nested
@@ -92,13 +87,13 @@ class AuthIntegrationTests @Autowired constructor(
 
             // When
             val result = webTestClient.post().uri("/api/v1/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
+                .contentType(APPLICATION_JSON)
                 .bodyValue(registerRequest)
                 .exchange()
 
             // Then
             result.expectStatus().isCreated
-                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectHeader().contentType(APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.data.id").isNotEmpty
                 .jsonPath("$.data.email").isEqualTo(registerRequest.email)
@@ -140,7 +135,7 @@ class AuthIntegrationTests @Autowired constructor(
 
             // When
             webTestClient.post().uri("/api/v1/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
+                .contentType(APPLICATION_JSON)
                 .bodyValue(registerRequest)
                 .exchange().expectStatus().isEqualTo(HttpStatus.CONFLICT)
 
@@ -160,7 +155,7 @@ class AuthIntegrationTests @Autowired constructor(
 
             // When
             webTestClient.post().uri("/api/v1/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
+                .contentType(APPLICATION_JSON)
                 .bodyValue(registerRequest)
                 .exchange().expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT)
 

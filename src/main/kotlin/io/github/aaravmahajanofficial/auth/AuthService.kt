@@ -17,7 +17,6 @@ package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.auth.events.UserLoginEvent
 import io.github.aaravmahajanofficial.auth.events.UserRegisterEvent
-import io.github.aaravmahajanofficial.auth.jwt.JwtAuthenticationPrincipal
 import io.github.aaravmahajanofficial.auth.jwt.JwtService
 import io.github.aaravmahajanofficial.auth.jwt.TokenRequest
 import io.github.aaravmahajanofficial.auth.jwt.TokenType
@@ -32,6 +31,7 @@ import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenManager
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenRequestDto
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenResponseDto
+import io.github.aaravmahajanofficial.auth.token.TokenBlacklistService
 import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
 import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
 import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
@@ -44,12 +44,16 @@ import io.github.aaravmahajanofficial.users.User
 import io.github.aaravmahajanofficial.users.UserRepository
 import io.github.aaravmahajanofficial.users.UserStatus
 import jakarta.transaction.Transactional
+import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import java.time.Instant
+import java.util.UUID
 
+@Suppress("TooGenericExceptionCaught")
 @Service
 class AuthService(
     private val userRepository: UserRepository,
@@ -59,7 +63,10 @@ class AuthService(
     private val jwtService: JwtService,
     private val jwtProperties: JwtProperties,
     private val refreshTokenManager: RefreshTokenManager,
+    private val tokenBlacklistService: TokenBlacklistService,
 ) {
+
+    private val logger = LoggerFactory.getLogger(AuthService::class.java)
 
     @Transactional
     fun register(requestBody: RegisterRequestDto): RegisterResponseDto {
@@ -158,8 +165,39 @@ class AuthService(
         )
     }
 
-    fun logout(principal: JwtAuthenticationPrincipal) {
-        // Will be implemented later
+    fun logout(accessToken: String, refreshToken: String?) {
+        try {
+            val accessClaims = jwtService.extractAllClaims(accessToken)
+            val jti = accessClaims.id
+            val expiresAt = accessClaims.expiration.toInstant()
+
+            if (jti != null) {
+                tokenBlacklistService.blacklistToken(jti, expiresAt)
+            }
+        } catch (e: Exception) {
+            logger.warn("Failed to blacklist access token during logout", e)
+        }
+
+        if (!refreshToken.isNullOrBlank()) {
+            try {
+                val refreshClaims = jwtService.extractAllClaims(refreshToken)
+                val refreshTokenJti = UUID.fromString(refreshClaims.id)
+                refreshTokenManager.revokeRefreshToken(refreshTokenJti)
+            } catch (e: Exception) {
+                logger.warn("Failed to revoke refresh token during logout", e)
+            }
+        }
+    }
+
+    @Transactional
+    fun logoutAll(userId: UUID) {
+        val user = userRepository.findByIdOrNull(userId) ?: throw NoSuchElementException("User not found")
+
+        // Block all Access Tokens issued before now
+        tokenBlacklistService.revokeAllUserTokens(user.id.toString())
+
+        // Remove all Refresh Tokens
+        refreshTokenManager.revokeAllUserTokens(user)
     }
 
     private fun findUserByEmailOrThrow(requestBody: LoginRequestDto): User = (

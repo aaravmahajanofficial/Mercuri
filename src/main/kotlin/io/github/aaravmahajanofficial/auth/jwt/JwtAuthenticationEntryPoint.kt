@@ -46,10 +46,12 @@ class JwtAuthenticationEntryPoint(private val objectMapper: ObjectMapper) : Auth
     ) {
         logger.debug("Unauthorized request: {} to {}", sanitizeLogInput(request.requestURI), authException.message)
 
+        val errorMessage = authException.message ?: "Missing or invalid authorization token."
+
         val problemDetail = ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED).apply {
             type = UNAUTHORIZED_TYPE
             title = "Unauthorized"
-            detail = "Missing or invalid authorization token."
+            detail = errorMessage
             instance = URI.create(request.requestURI)
         }
 

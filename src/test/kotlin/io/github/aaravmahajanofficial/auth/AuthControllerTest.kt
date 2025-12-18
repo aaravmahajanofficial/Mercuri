@@ -16,6 +16,8 @@
 package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.ProblemResponseAssertions
+import io.github.aaravmahajanofficial.auth.jwt.JwtAuthenticationEntryPoint
+import io.github.aaravmahajanofficial.auth.jwt.JwtAuthenticationPrincipal
 import io.github.aaravmahajanofficial.auth.jwt.JwtService
 import io.github.aaravmahajanofficial.auth.jwt.TokenValidationError
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
@@ -25,6 +27,7 @@ import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenRequestDto
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenResponseDto
+import io.github.aaravmahajanofficial.auth.token.TokenBlacklistService
 import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
 import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
 import io.github.aaravmahajanofficial.common.exception.InvalidTokenException
@@ -38,6 +41,8 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.check
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.isNull
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -49,6 +54,8 @@ import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.http.MediaType.APPLICATION_XML
 import org.springframework.security.authentication.BadCredentialsException
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
@@ -69,6 +76,12 @@ class AuthControllerTest : ProblemResponseAssertions() {
 
     @MockitoBean
     lateinit var jwtService: JwtService
+
+    @MockitoBean
+    lateinit var tokenBlacklistService: TokenBlacklistService
+
+    @MockitoBean
+    lateinit var entryPoint: JwtAuthenticationEntryPoint
 
     @MockitoBean
     lateinit var authService: AuthService
@@ -615,7 +628,69 @@ class AuthControllerTest : ProblemResponseAssertions() {
             // Then
             assertUnprocessableContent(result, "/api/v1/auth/refresh")
         }
+
+        private fun createRefreshTokenRequest(refreshToken: String) = RefreshTokenRequestDto(refreshToken)
     }
 
-    private fun createRefreshTokenRequest(refreshToken: String) = RefreshTokenRequestDto(refreshToken)
+    @Nested
+    @DisplayName("POST /api/v1/auth/logout")
+    inner class Logout {
+
+        @Test
+        fun `should return 204 No Content on successful logout`() {
+            // Given
+            val rawToken = "valid.jwt.token"
+            val authHeader = "Bearer $rawToken"
+
+            // When & Then
+            mockMvc.post("/api/v1/auth/logout") {
+                header("Authorization", authHeader)
+            }.andExpect { status { isNoContent() } }
+
+            // Verify if the rawToken is being passed correctly.
+            // If the controller forgets to substring(7), this test fails.
+            verify(authService).logout(eq(rawToken), isNull())
+        }
+
+        @Test
+        fun `should pass refresh token to service if provided in body`() {
+            // Given
+            val rawToken = "valid.jwt.token"
+            val authHeader = "Bearer $rawToken"
+            val refreshToken = "valid.refresh.token"
+            val requestBody = RefreshTokenRequestDto(refreshToken)
+
+            // When & Then
+            mockMvc.post("/api/v1/auth/logout") {
+                header("Authorization", authHeader)
+                contentType = APPLICATION_JSON
+                content = objectMapper.writeValueAsString(requestBody)
+            }.andExpect { status { isNoContent() } }
+
+            // Verify if the rawToken is being passed correctly.
+            // If the controller forgets to substring(7), this test fails.
+            verify(authService).logout(eq(rawToken), eq(refreshToken))
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/v1/auth/logout-all")
+    inner class LogoutAll {
+
+        @Test
+        fun `should return 204 No Content on successful logout from all devices`() {
+            // Given
+            val userId = UUID.randomUUID()
+            val principal = JwtAuthenticationPrincipal(userId, "john.doe@example.com")
+            val auth = UsernamePasswordAuthenticationToken(principal, null, emptyList())
+            SecurityContextHolder.getContext().authentication = auth
+
+            // When
+            mockMvc.post("/api/v1/auth/logout-all").andExpect { status { isNoContent() } }
+
+            // Then
+            // Ensures the controller didn't pass null or a hardcoded value.
+            verify(authService).logoutAll(eq(userId))
+        }
+    }
 }

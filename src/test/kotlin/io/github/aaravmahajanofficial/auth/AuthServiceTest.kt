@@ -25,6 +25,7 @@ import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenManager
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenRequestDto
+import io.github.aaravmahajanofficial.auth.token.TokenBlacklistService
 import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
 import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
 import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
@@ -89,6 +90,9 @@ class AuthServiceTest {
 
     @Mock
     lateinit var jwtProperties: JwtProperties
+
+    @Mock
+    lateinit var tokenBlacklistService: TokenBlacklistService
 
     @InjectMocks
     lateinit var authService: AuthService

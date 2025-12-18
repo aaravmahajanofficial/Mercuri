@@ -16,6 +16,7 @@
 package io.github.aaravmahajanofficial.auth.jwt
 
 import io.github.aaravmahajanofficial.users.RoleType
+import java.util.Date
 import java.util.UUID
 
 data class TokenValidationResult(
@@ -24,15 +25,17 @@ data class TokenValidationResult(
     val userID: UUID? = null,
     val email: String? = null,
     val roles: Set<RoleType>? = null,
+    val issuedAt: Date? = null,
     val error: TokenValidationError? = null,
 ) {
     companion object {
-        fun valid(jti: UUID, userID: UUID, email: String, roles: Set<RoleType>) = TokenValidationResult(
+        fun valid(jti: UUID, userID: UUID, email: String, roles: Set<RoleType>, issuedAt: Date) = TokenValidationResult(
             isValid = true,
             jti = jti,
             userID = userID,
             email = email,
             roles = roles,
+            issuedAt = issuedAt,
         )
 
         fun invalid(error: TokenValidationError) = TokenValidationResult(

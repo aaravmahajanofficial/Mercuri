@@ -105,6 +105,7 @@ class JwtService(private val jwtProperties: JwtProperties, private val secretKey
                 userID = userId,
                 email = email,
                 roles = extractRolesFromClaims(claims),
+                issuedAt = claims.issuedAt,
             )
         } catch (e: InvalidTokenException) {
             TokenValidationResult.invalid(e.error ?: TokenValidationError.MALFORMED)

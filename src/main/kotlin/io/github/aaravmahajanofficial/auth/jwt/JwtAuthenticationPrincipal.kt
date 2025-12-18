@@ -17,4 +17,4 @@ package io.github.aaravmahajanofficial.auth.jwt
 
 import java.util.UUID
 
-data class JwtAuthenticationPrincipal(val userID: UUID, val email: String)
+data class JwtAuthenticationPrincipal(val userId: UUID, val email: String)

@@ -34,8 +34,8 @@ class RefreshTokenManager(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val redisTemplate: StringRedisTemplate,
 ) {
-    companion object {
-        const val REDIS_PREFIX = "rt:"
+    private companion object {
+        const val REDIS_PREFIX = "jwt:rt:"
     }
 
     @Transactional
@@ -104,7 +104,31 @@ class RefreshTokenManager(
         return true
     }
 
-    private fun revoke(oldTokenJti: UUID) {
+    @Transactional
+    fun revokeRefreshToken(oldTokenJti: UUID) {
+        // Remove from Redis
+        redisTemplate.delete(getRedisKey(oldTokenJti))
+
+        // Mark revoked in DB
+        revoke(oldTokenJti)
+    }
+
+    @Transactional
+    fun revokeAllUserTokens(user: User) {
+        val activeTokens = refreshTokenRepository.findAllByUserIdAndRevokedFalse(requireNotNull(user.id))
+        if (activeTokens.isEmpty()) return
+
+        // Remove all from Redis
+        val redisKeys = activeTokens.map { getRedisKey(it.jti) }
+        redisTemplate.delete(redisKeys)
+
+        activeTokens.forEach { it.revoked = true }
+
+        // Mark all as revoked in DB
+        refreshTokenRepository.saveAllAndFlush(activeTokens)
+    }
+
+    fun revoke(oldTokenJti: UUID) {
         refreshTokenRepository.findById(oldTokenJti).ifPresent {
             it.revoked = true
             refreshTokenRepository.saveAndFlush(it)
