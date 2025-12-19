@@ -28,8 +28,6 @@ import jakarta.persistence.ManyToMany
 import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
 import org.hibernate.annotations.CreationTimestamp
-import org.hibernate.annotations.OnDelete
-import org.hibernate.annotations.OnDeleteAction
 import org.hibernate.annotations.UpdateTimestamp
 import java.time.Instant
 
@@ -81,7 +79,6 @@ class User(
         joinColumns = [JoinColumn(name = "user_id")],
         inverseJoinColumns = [JoinColumn(name = "role_id")],
     )
-    @OnDelete(action = OnDeleteAction.CASCADE)
     protected var _roles: MutableSet<Role> = mutableSetOf()
     val roles: Set<Role> get() = _roles
 
@@ -108,6 +105,4 @@ class User(
         _addresses.remove(address)
         address.user = null
     }
-
-    override fun toString(): String = "User(id=$id, email=$email, fullName=${fullName()}, status=$status)"
 }

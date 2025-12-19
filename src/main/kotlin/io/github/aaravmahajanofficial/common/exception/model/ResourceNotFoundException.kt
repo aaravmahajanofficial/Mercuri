@@ -13,7 +13,7 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.common.exception
+package io.github.aaravmahajanofficial.common.exception.model
 
-class UserAlreadyExistsException(message: String = "User with identical credentials already exists") :
-    RuntimeException(message)
+open class ResourceNotFoundException(val resourceName: String, val fieldName: String, val fieldValue: Any) :
+    RuntimeException("$resourceName not found with $fieldName: '$fieldValue'")

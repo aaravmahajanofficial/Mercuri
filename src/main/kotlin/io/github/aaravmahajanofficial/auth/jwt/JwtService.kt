@@ -15,7 +15,7 @@
  */
 package io.github.aaravmahajanofficial.auth.jwt
 
-import io.github.aaravmahajanofficial.common.exception.InvalidTokenException
+import io.github.aaravmahajanofficial.common.exception.model.InvalidTokenException
 import io.github.aaravmahajanofficial.config.JwtProperties
 import io.github.aaravmahajanofficial.users.RoleType
 import io.jsonwebtoken.Claims
@@ -105,6 +105,7 @@ class JwtService(private val jwtProperties: JwtProperties, private val secretKey
                 userID = userId,
                 email = email,
                 roles = extractRolesFromClaims(claims),
+                issuedAt = claims.issuedAt,
             )
         } catch (e: InvalidTokenException) {
             TokenValidationResult.invalid(e.error ?: TokenValidationError.MALFORMED)

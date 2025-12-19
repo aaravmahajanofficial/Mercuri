@@ -13,6 +13,20 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.common.exception
+package io.github.aaravmahajanofficial.users
 
-open class AccountSuspendedException : RuntimeException("Your account has been suspended.")
+import java.time.Instant
+import java.util.UUID
+
+data class UserProfileDto(
+    val id: UUID,
+    val email: String,
+    val fullName: String,
+    val phoneNumber: String,
+    val emailVerified: Boolean,
+    val phoneVerified: Boolean,
+    val status: UserStatus,
+    val createdAt: Instant,
+    val lastLoginAt: Instant,
+    val roles: Set<RoleType>,
+)

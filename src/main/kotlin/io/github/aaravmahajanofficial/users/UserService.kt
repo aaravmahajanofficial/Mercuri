@@ -13,8 +13,18 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.auth.jwt
+package io.github.aaravmahajanofficial.users
 
+import io.github.aaravmahajanofficial.auth.mappers.toProfileDto
+import io.github.aaravmahajanofficial.common.exception.model.ResourceNotFoundException
+import org.springframework.data.repository.findByIdOrNull
+import org.springframework.stereotype.Service
 import java.util.UUID
 
-data class JwtAuthenticationPrincipal(val userId: UUID, val email: String)
+@Service
+class UserService(private val userRepository: UserRepository) {
+    fun getUserProfile(userId: UUID): UserProfileDto {
+        val user = userRepository.findByIdOrNull(userId) ?: throw ResourceNotFoundException("User", "id", userId)
+        return user.toProfileDto()
+    }
+}

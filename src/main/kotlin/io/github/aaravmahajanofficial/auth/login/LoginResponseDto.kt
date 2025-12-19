@@ -17,23 +17,9 @@ package io.github.aaravmahajanofficial.auth.login
 
 import io.github.aaravmahajanofficial.auth.AuthStatus
 import io.github.aaravmahajanofficial.users.RoleType
-import io.github.aaravmahajanofficial.users.UserStatus
-import java.time.Instant
 import java.util.UUID
 
-data class UserDto(
-    val id: UUID,
-    val email: String,
-    val firstName: String,
-    val lastName: String,
-    val phoneNumber: String,
-    val emailVerified: Boolean,
-    val phoneVerified: Boolean,
-    val status: UserStatus,
-    val createdAt: Instant,
-    val lastLoginAt: Instant,
-    val roles: List<RoleType>,
-)
+data class UserDto(val id: UUID, val email: String, val roles: List<RoleType>)
 
 data class LoginResponseDto(
     val authStatus: AuthStatus,

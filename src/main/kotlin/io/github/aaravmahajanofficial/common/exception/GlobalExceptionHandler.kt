@@ -16,6 +16,12 @@
 package io.github.aaravmahajanofficial.common.exception
 
 import io.github.aaravmahajanofficial.common.LogSanitizer.sanitizeLogInput
+import io.github.aaravmahajanofficial.common.exception.model.AccountSuspendedException
+import io.github.aaravmahajanofficial.common.exception.model.DefaultRoleNotFoundException
+import io.github.aaravmahajanofficial.common.exception.model.EmailNotVerifiedException
+import io.github.aaravmahajanofficial.common.exception.model.InvalidTokenException
+import io.github.aaravmahajanofficial.common.exception.model.ResourceNotFoundException
+import io.github.aaravmahajanofficial.common.exception.model.UserAlreadyExistsException
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -42,6 +48,7 @@ class GlobalExceptionHandler {
         private val UNAUTHORIZED_TYPE = URI.create("https://api.example.com/problems/unauthorized")
         private val FORBIDDEN_TYPE = URI.create("https://api.example.com/problems/forbidden")
         private val INVALID_TOKEN_TYPE = URI.create("https://api.example.com/problems/invalid-token")
+        private val NOT_FOUND_TYPE = URI.create("https://api.example.com/problems/not-found")
     }
 
     private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
@@ -199,6 +206,23 @@ class GlobalExceptionHandler {
             instance = URI.create(request.requestURI)
 
             setProperty("requiresVerification", true)
+        }
+    }
+
+    // 404 Not Found
+    @ExceptionHandler(ResourceNotFoundException::class)
+    fun handleNotFound(ex: ResourceNotFoundException, request: HttpServletRequest): ProblemDetail {
+        logger.warn("Resource not found at {}: {}", sanitizeLogInput(request.requestURI), ex.message)
+
+        return ProblemDetail.forStatus(HttpStatus.NOT_FOUND).apply {
+            type = NOT_FOUND_TYPE
+            title = "Resource Not Found"
+            detail = ex.message
+            instance = URI.create(request.requestURI)
+
+            setProperty("resource", ex.resourceName)
+            setProperty("field", ex.fieldName)
+            setProperty("value", ex.fieldValue)
         }
     }
 

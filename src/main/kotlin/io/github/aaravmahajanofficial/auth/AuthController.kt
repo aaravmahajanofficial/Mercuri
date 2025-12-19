@@ -24,11 +24,14 @@ import io.github.aaravmahajanofficial.auth.token.RefreshTokenRequestDto
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenResponseDto
 import io.github.aaravmahajanofficial.common.ApiResponse
 import jakarta.validation.Valid
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
@@ -66,5 +69,18 @@ class AuthController(private val authService: AuthService) {
 
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun logout(@CurrentUser principal: JwtAuthenticationPrincipal) = authService.logout(principal)
+    fun logout(
+        @RequestHeader(HttpHeaders.AUTHORIZATION) authorization: String?,
+        @Valid @RequestBody(required = false) request: RefreshTokenRequestDto?,
+    ) {
+        val accessToken = authorization?.takeIf { it.startsWith("Bearer ") }?.removePrefix("Bearer ")
+        if (accessToken != null) {
+            authService.logout(accessToken, request?.refreshToken)
+        }
+    }
+
+    @PostMapping("/logout-all")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun logoutAll(@AuthenticationPrincipal principal: JwtAuthenticationPrincipal) =
+        authService.logoutAll(principal.userId)
 }

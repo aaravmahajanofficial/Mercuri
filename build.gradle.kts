@@ -89,12 +89,14 @@ kover {
             excludes {
                 classes("io.github.aaravmahajanofficial.ApplicationKt")
                 classes("io.github.aaravmahajanofficial.config.*")
-                classes(
-                    "*Dto",
-                    "io.github.aaravmahajanofficial.common.ApiResponse*",
-                )
-                classes("io.github.aaravmahajanofficial.common.exception.*")
                 classes("io.github.aaravmahajanofficial.db.migration.*")
+
+                classes(
+                    "io.github.aaravmahajanofficial.common.BaseEntity",
+                    "io.github.aaravmahajanofficial.common.LogSanitizer",
+                    "io.github.aaravmahajanofficial.common.exception.model.*",
+                    "*Dto",
+                )
             }
         }
         verify {

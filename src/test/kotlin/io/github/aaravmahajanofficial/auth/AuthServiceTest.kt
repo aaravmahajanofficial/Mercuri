@@ -25,11 +25,12 @@ import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenManager
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenRequestDto
-import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
-import io.github.aaravmahajanofficial.common.exception.DefaultRoleNotFoundException
-import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
-import io.github.aaravmahajanofficial.common.exception.InvalidTokenException
-import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
+import io.github.aaravmahajanofficial.auth.token.TokenBlacklistService
+import io.github.aaravmahajanofficial.common.exception.model.AccountSuspendedException
+import io.github.aaravmahajanofficial.common.exception.model.DefaultRoleNotFoundException
+import io.github.aaravmahajanofficial.common.exception.model.EmailNotVerifiedException
+import io.github.aaravmahajanofficial.common.exception.model.InvalidTokenException
+import io.github.aaravmahajanofficial.common.exception.model.UserAlreadyExistsException
 import io.github.aaravmahajanofficial.config.JwtProperties
 import io.github.aaravmahajanofficial.users.Role
 import io.github.aaravmahajanofficial.users.RoleRepository
@@ -89,6 +90,9 @@ class AuthServiceTest {
 
     @Mock
     lateinit var jwtProperties: JwtProperties
+
+    @Mock
+    lateinit var tokenBlacklistService: TokenBlacklistService
 
     @InjectMocks
     lateinit var authService: AuthService
@@ -228,9 +232,6 @@ class AuthServiceTest {
             result.expiresIn shouldBe 900L
             result.tokenType shouldBe "Bearer"
             result.authStatus shouldBe AuthStatus.VERIFIED
-
-            // 5. Response should contain the updated lastLoginAt
-            result.user.lastLoginAt shouldBe persistedUser.lastLoginAt
         }
 
         @Test

@@ -17,6 +17,7 @@ package io.github.aaravmahajanofficial.auth.token
 
 import io.github.aaravmahajanofficial.auth.jwt.JwtService
 import io.github.aaravmahajanofficial.auth.jwt.TokenRequest
+import io.github.aaravmahajanofficial.common.exception.model.InvalidTokenException
 import io.github.aaravmahajanofficial.config.JwtProperties
 import io.github.aaravmahajanofficial.users.User
 import jakarta.transaction.Transactional
@@ -34,8 +35,8 @@ class RefreshTokenManager(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val redisTemplate: StringRedisTemplate,
 ) {
-    companion object {
-        const val REDIS_PREFIX = "rt:"
+    private companion object {
+        const val REDIS_PREFIX = "jwt:rt:"
     }
 
     @Transactional
@@ -104,11 +105,36 @@ class RefreshTokenManager(
         return true
     }
 
+    @Transactional
+    fun revokeRefreshToken(oldTokenJti: UUID) {
+        // Remove from Redis
+        redisTemplate.delete(getRedisKey(oldTokenJti))
+
+        // Mark revoked in DB
+        revoke(oldTokenJti)
+    }
+
+    @Transactional
+    fun revokeAllUserTokens(user: User) {
+        val activeTokens = refreshTokenRepository.findAllByUserIdAndRevokedFalse(requireNotNull(user.id))
+        if (activeTokens.isEmpty()) return
+
+        // Remove all from Redis
+        val redisKeys = activeTokens.map { getRedisKey(it.jti) }
+        redisTemplate.delete(redisKeys)
+
+        activeTokens.forEach { it.revoked = true }
+
+        // Mark all as revoked in DB
+        refreshTokenRepository.saveAllAndFlush(activeTokens)
+    }
+
     private fun revoke(oldTokenJti: UUID) {
-        refreshTokenRepository.findById(oldTokenJti).ifPresent {
-            it.revoked = true
-            refreshTokenRepository.saveAndFlush(it)
+        val token = refreshTokenRepository.findById(oldTokenJti).orElseThrow {
+            InvalidTokenException("Refresh token not found in DB")
         }
+        token.revoked = true
+        refreshTokenRepository.saveAndFlush(token)
     }
 
     private fun getRedisKey(jti: UUID?): String = "$REDIS_PREFIX$jti"

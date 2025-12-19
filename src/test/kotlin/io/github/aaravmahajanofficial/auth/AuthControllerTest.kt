@@ -16,6 +16,8 @@
 package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.ProblemResponseAssertions
+import io.github.aaravmahajanofficial.auth.jwt.JwtAuthenticationEntryPoint
+import io.github.aaravmahajanofficial.auth.jwt.JwtAuthenticationPrincipal
 import io.github.aaravmahajanofficial.auth.jwt.JwtService
 import io.github.aaravmahajanofficial.auth.jwt.TokenValidationError
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
@@ -25,10 +27,12 @@ import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.register.RegisterResponseDto
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenRequestDto
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenResponseDto
-import io.github.aaravmahajanofficial.common.exception.AccountSuspendedException
-import io.github.aaravmahajanofficial.common.exception.EmailNotVerifiedException
-import io.github.aaravmahajanofficial.common.exception.InvalidTokenException
-import io.github.aaravmahajanofficial.common.exception.UserAlreadyExistsException
+import io.github.aaravmahajanofficial.auth.token.TokenBlacklistService
+import io.github.aaravmahajanofficial.common.exception.model.AccountSuspendedException
+import io.github.aaravmahajanofficial.common.exception.model.DefaultRoleNotFoundException
+import io.github.aaravmahajanofficial.common.exception.model.EmailNotVerifiedException
+import io.github.aaravmahajanofficial.common.exception.model.InvalidTokenException
+import io.github.aaravmahajanofficial.common.exception.model.UserAlreadyExistsException
 import io.github.aaravmahajanofficial.users.RoleType
 import io.github.aaravmahajanofficial.users.UserStatus
 import io.kotest.matchers.shouldBe
@@ -37,7 +41,10 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.check
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.isNull
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -49,6 +56,8 @@ import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.http.MediaType.APPLICATION_XML
 import org.springframework.security.authentication.BadCredentialsException
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
@@ -69,6 +78,12 @@ class AuthControllerTest : ProblemResponseAssertions() {
 
     @MockitoBean
     lateinit var jwtService: JwtService
+
+    @MockitoBean
+    lateinit var tokenBlacklistService: TokenBlacklistService
+
+    @MockitoBean
+    lateinit var entryPoint: JwtAuthenticationEntryPoint
 
     @MockitoBean
     lateinit var authService: AuthService
@@ -240,7 +255,32 @@ class AuthControllerTest : ProblemResponseAssertions() {
         }
 
         @Test
-        fun `should return 500 Server Error when unexpected failure occurs`() {
+        fun `should return 500 Internal Server Error when default role is missing`() {
+            // Given
+            val request = createValidRegisterRequest()
+
+            whenever(authService.register(request)).thenThrow(DefaultRoleNotFoundException())
+
+            // When
+            val result = mockMvc.post("/api/v1/auth/register") {
+                contentType = APPLICATION_JSON
+                content = objectMapper.writeValueAsString(request)
+                accept = APPLICATION_PROBLEM_JSON
+            }
+
+            // Then
+            assertInternalServerError(
+                result,
+                "System Configuration Error",
+                "A required system role is misconfigured. Please contact support.",
+                "/api/v1/auth/register",
+            )
+
+            verify(authService).register(any())
+        }
+
+        @Test
+        fun `should return 500 Internal Server Error when unexpected failure occurs`() {
             // Given
             val request = createValidRegisterRequest()
 
@@ -313,13 +353,6 @@ class AuthControllerTest : ProblemResponseAssertions() {
                 // Verify the nested fields within the 'user' object
                 jsonPath("$.data.user.id") { value(serviceResponse.user.id.toString()) }
                 jsonPath("$.data.user.email") { value(serviceResponse.user.email) }
-                jsonPath("$.data.user.firstName") { value(serviceResponse.user.firstName) }
-                jsonPath("$.data.user.lastName") { value(serviceResponse.user.lastName) }
-                jsonPath("$.data.user.emailVerified") { value(serviceResponse.user.emailVerified) }
-                jsonPath("$.data.user.phoneVerified") { value(serviceResponse.user.phoneVerified) }
-                jsonPath("$.data.user.status") { value(serviceResponse.user.status.value) }
-                jsonPath("$.data.user.createdAt") { isNotEmpty() }
-                jsonPath("$.data.user.lastLoginAt") { isNotEmpty() }
                 jsonPath("$.data.user.roles") { value(hasItem(RoleType.CUSTOMER.value)) }
             }
 
@@ -459,14 +492,53 @@ class AuthControllerTest : ProblemResponseAssertions() {
         }
 
         @Test
-        fun `should return 500 Server Error when unexpected failure occurs`() {
+        fun `should return 405 Method Not Allowed`() {
+            // Given
+
+            // When
+            val result = mockMvc.get("/api/v1/auth/login") {
+                accept = APPLICATION_PROBLEM_JSON
+            }
+
+            // Then
+            assertMethodNotAllowed(result, "/api/v1/auth/login")
+
+            result.andExpect {
+                jsonPath("$.rejectedMethod") { value("GET") }
+                jsonPath("$.allowedMethods[0]") { value("POST") }
+            }
+
+            verify(authService, never()).login(any())
+        }
+
+        @Test
+        fun `should return 415 Unsupported Media Type for non-JSON request`() {
             // Given
             val request = LoginRequestDto(
                 email = "john.doe@example.com",
-                password = "StrongP@ss1",
+                password = "StrongP@ss123!",
             )
 
-            whenever(authService.login(any())).thenThrow(RuntimeException())
+            // When
+            val result = mockMvc.post("/api/v1/auth/login") {
+                contentType = APPLICATION_XML
+                content = objectMapper.writeValueAsString(request)
+                accept = APPLICATION_PROBLEM_JSON
+            }
+
+            // Then
+            assertUnsupportedMediaType(result, "/api/v1/auth/login")
+
+            verify(authService, never()).login(any())
+        }
+
+        @Test
+        fun `should return 422 Unprocessable Content for invalid login request`() {
+            // Given
+            val request = LoginRequestDto(
+                email = "",
+                password = "",
+            )
 
             // When
             val result = mockMvc.post("/api/v1/auth/login") {
@@ -476,26 +548,20 @@ class AuthControllerTest : ProblemResponseAssertions() {
             }
 
             // Then
-            assertInternalServerError(
-                result = result,
-                title = "Internal Server Error",
-                instance = "/api/v1/auth/login",
-            )
+            assertUnprocessableContent(result, "/api/v1/auth/login")
 
-            verify(authService, times(1)).login(any())
+            result.andExpect {
+                jsonPath("$.validationErrors") { isArray() }
+                jsonPath("$.validationErrors[?(@.field=='email')]") { exists() }
+                jsonPath("$.validationErrors[?(@.field=='password')]") { exists() }
+            }
+
+            verify(authService, never()).login(any())
         }
 
         private fun createMockUser(id: UUID = UUID.randomUUID(), email: String = "john.doe@example.com") = UserDto(
             id = id,
             email = email,
-            firstName = "John",
-            lastName = "Doe",
-            phoneNumber = "+1234567890",
-            emailVerified = true,
-            phoneVerified = true,
-            status = UserStatus.ACTIVE,
-            createdAt = Instant.now(),
-            lastLoginAt = Instant.now(),
             roles = listOf(RoleType.CUSTOMER),
         )
     }
@@ -601,6 +667,46 @@ class AuthControllerTest : ProblemResponseAssertions() {
         }
 
         @Test
+        fun `should return 405 Method Not Allowed`() {
+            // Given
+
+            // When
+            val result = mockMvc.get("/api/v1/auth/refresh") {
+                accept = APPLICATION_PROBLEM_JSON
+            }
+
+            // Then
+            assertMethodNotAllowed(result, "/api/v1/auth/refresh")
+
+            result.andExpect {
+                jsonPath("$.rejectedMethod") { value("GET") }
+                jsonPath("$.allowedMethods[0]") { value("POST") }
+            }
+
+            verify(authService, never()).refreshAccessToken(any())
+        }
+
+        @Test
+        fun `should return 415 Unsupported Media Type for non-JSON request`() {
+            // Given
+            val request = RefreshTokenRequestDto(
+                refreshToken = "valid.refresh.token",
+            )
+
+            // When
+            val result = mockMvc.post("/api/v1/auth/refresh") {
+                contentType = APPLICATION_XML
+                content = objectMapper.writeValueAsString(request)
+                accept = APPLICATION_PROBLEM_JSON
+            }
+
+            // Then
+            assertUnsupportedMediaType(result, "/api/v1/auth/refresh")
+
+            verify(authService, never()).refreshAccessToken(any())
+        }
+
+        @Test
         fun `should return 422 Unprocessable Content when refresh token is blank`() {
             // Given
             val request = createRefreshTokenRequest("")
@@ -615,7 +721,107 @@ class AuthControllerTest : ProblemResponseAssertions() {
             // Then
             assertUnprocessableContent(result, "/api/v1/auth/refresh")
         }
+
+        private fun createRefreshTokenRequest(refreshToken: String) = RefreshTokenRequestDto(refreshToken)
     }
 
-    private fun createRefreshTokenRequest(refreshToken: String) = RefreshTokenRequestDto(refreshToken)
+    @Nested
+    @DisplayName("POST /api/v1/auth/logout")
+    inner class Logout {
+
+        @Test
+        fun `should return 204 No Content on successful logout`() {
+            // Given
+            val rawToken = "valid.jwt.token"
+            val authHeader = "Bearer $rawToken"
+
+            // When & Then
+            mockMvc.post("/api/v1/auth/logout") {
+                header("Authorization", authHeader)
+            }.andExpect { status { isNoContent() } }
+
+            // Verify if the rawToken is being passed correctly.
+            // If the controller forgets to substring(7), this test fails.
+            verify(authService).logout(eq(rawToken), isNull())
+        }
+
+        @Test
+        fun `should pass refresh token to service if provided in body`() {
+            // Given
+            val rawToken = "valid.jwt.token"
+            val authHeader = "Bearer $rawToken"
+            val refreshToken = "valid.refresh.token"
+            val requestBody = RefreshTokenRequestDto(refreshToken)
+
+            // When & Then
+            mockMvc.post("/api/v1/auth/logout") {
+                header("Authorization", authHeader)
+                contentType = APPLICATION_JSON
+                content = objectMapper.writeValueAsString(requestBody)
+            }.andExpect { status { isNoContent() } }
+
+            // Verify if the rawToken is being passed correctly.
+            // If the controller forgets to substring(7), this test fails.
+            verify(authService).logout(eq(rawToken), eq(refreshToken))
+        }
+
+        @Test
+        fun `should return 405 Method Not Allowed`() {
+            // Given
+
+            // When
+            val result = mockMvc.get("/api/v1/auth/logout") {
+                accept = APPLICATION_PROBLEM_JSON
+            }
+
+            // Then
+            assertMethodNotAllowed(result, "/api/v1/auth/logout")
+
+            result.andExpect {
+                jsonPath("$.rejectedMethod") { value("GET") }
+                jsonPath("$.allowedMethods[0]") { value("POST") }
+            }
+
+            verify(authService, never()).logout(any(), anyOrNull())
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/v1/auth/logout-all")
+    inner class LogoutAll {
+
+        @Test
+        fun `should return 204 No Content on successful logout from all devices`() {
+            // Given
+            val userId = UUID.randomUUID()
+            val principal = JwtAuthenticationPrincipal(userId, "john.doe@example.com")
+            val auth = UsernamePasswordAuthenticationToken(principal, null, emptyList())
+            SecurityContextHolder.getContext().authentication = auth
+
+            // When
+            mockMvc.post("/api/v1/auth/logout-all").andExpect { status { isNoContent() } }
+
+            // Then
+            // Ensures the controller didn't pass null or a hardcoded value.
+            verify(authService).logoutAll(eq(userId))
+        }
+
+        @Test
+        fun `should return 405 Method Not Allowed`() {
+            // Given
+
+            // When
+            val result = mockMvc.get("/api/v1/auth/logout-all") {
+                accept = APPLICATION_PROBLEM_JSON
+            }
+
+            // Then
+            assertMethodNotAllowed(result, "/api/v1/auth/logout-all")
+
+            result.andExpect {
+                jsonPath("$.rejectedMethod") { value("GET") }
+                jsonPath("$.allowedMethods[0]") { value("POST") }
+            }
+        }
+    }
 }

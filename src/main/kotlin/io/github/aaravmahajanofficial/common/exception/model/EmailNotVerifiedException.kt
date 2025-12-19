@@ -13,8 +13,6 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.auth.jwt
+package io.github.aaravmahajanofficial.common.exception.model
 
-import java.util.UUID
-
-data class JwtAuthenticationPrincipal(val userId: UUID, val email: String)
+open class EmailNotVerifiedException : RuntimeException("Email address is not verified.")

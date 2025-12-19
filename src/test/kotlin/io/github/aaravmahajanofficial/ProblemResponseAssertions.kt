@@ -108,6 +108,23 @@ open class ProblemResponseAssertions {
         )
     }
 
+    fun assertNotFound(result: ResultActionsDsl, detail: String, instance: String? = null) {
+        assertProblem(
+            result = result,
+            expectedType = "https://api.example.com/problems/not-found",
+            expectedTitle = "Resource Not Found",
+            expectedDetail = detail,
+            expectedInstance = instance,
+            expectedStatus = HttpStatus.NOT_FOUND.value(),
+        )
+
+        result.andExpect {
+            jsonPath("$.resource") { exists() }
+            jsonPath("$.field") { exists() }
+            jsonPath("$.value") { exists() }
+        }
+    }
+
     fun assertConflict(result: ResultActionsDsl, title: String, detail: String, instance: String? = null) {
         assertProblem(
             result = result,
@@ -145,12 +162,17 @@ open class ProblemResponseAssertions {
         )
     }
 
-    fun assertInternalServerError(result: ResultActionsDsl, title: String, instance: String? = null) {
+    fun assertInternalServerError(
+        result: ResultActionsDsl,
+        title: String,
+        detail: String = "An unexpected error occurred.",
+        instance: String? = null,
+    ) {
         assertProblem(
             result = result,
             expectedType = "https://api.example.com/problems/internal-server-error",
             expectedTitle = title,
-            expectedDetail = "An unexpected error occurred.",
+            expectedDetail = detail,
             expectedInstance = instance,
             expectedStatus = HttpStatus.INTERNAL_SERVER_ERROR.value(),
         )

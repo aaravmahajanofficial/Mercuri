@@ -13,11 +13,9 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.auth
+package io.github.aaravmahajanofficial.common.exception.model
 
-import org.springframework.security.core.annotation.AuthenticationPrincipal
+import io.github.aaravmahajanofficial.auth.jwt.TokenValidationError
 
-@Retention(AnnotationRetention.RUNTIME)
-@MustBeDocumented
-@AuthenticationPrincipal
-annotation class CurrentUser
+open class InvalidTokenException(message: String, val error: TokenValidationError? = null, cause: Throwable? = null) :
+    RuntimeException(message, cause)

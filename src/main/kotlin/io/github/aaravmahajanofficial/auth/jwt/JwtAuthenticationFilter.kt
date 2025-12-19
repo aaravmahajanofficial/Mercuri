@@ -15,11 +15,13 @@
  */
 package io.github.aaravmahajanofficial.auth.jwt
 
+import io.github.aaravmahajanofficial.auth.token.TokenBlacklistService
 import io.github.aaravmahajanofficial.common.LogSanitizer.sanitizeLogInput
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.LoggerFactory
+import org.springframework.security.authentication.InsufficientAuthenticationException
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
@@ -28,7 +30,11 @@ import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 
 @Component
-class JwtAuthenticationFilter(private val jwtService: JwtService) : OncePerRequestFilter() {
+class JwtAuthenticationFilter(
+    private val jwtService: JwtService,
+    private val tokenBlacklistService: TokenBlacklistService,
+    private val entryPoint: JwtAuthenticationEntryPoint,
+) : OncePerRequestFilter() {
 
     private val log = LoggerFactory.getLogger(JwtAuthenticationFilter::class.java)
 
@@ -71,6 +77,16 @@ class JwtAuthenticationFilter(private val jwtService: JwtService) : OncePerReque
             return
         }
 
+        val jti = validationResult.jti.toString()
+        val userId = validationResult.userID.toString()
+        val issuedAt = requireNotNull(validationResult.issuedAt)
+
+        if (tokenBlacklistService.isTokenBlacklisted(jti, userId, issuedAt)) {
+            val authException = InsufficientAuthenticationException("Token has been revoked")
+            entryPoint.commence(request, response, authException)
+            return
+        }
+
         // Token is valid -> build Authentication and set in Security Context
         setAuthentication(request, validationResult)
 
@@ -92,7 +108,7 @@ class JwtAuthenticationFilter(private val jwtService: JwtService) : OncePerReque
     private fun setAuthentication(request: HttpServletRequest, validationResult: TokenValidationResult) {
         // User object that Spring stores in the Security Context
         val principal = JwtAuthenticationPrincipal(
-            userID = validationResult.userID!!,
+            userId = validationResult.userID!!,
             email = validationResult.email!!,
         )
 
