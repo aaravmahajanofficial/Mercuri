@@ -70,11 +70,13 @@ class AuthController(private val authService: AuthService) {
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun logout(
-        @RequestHeader(HttpHeaders.AUTHORIZATION) authHeader: String,
+        @RequestHeader(HttpHeaders.AUTHORIZATION) authorization: String?,
         @RequestBody(required = false) request: RefreshTokenRequestDto?,
     ) {
-        val accessToken = authHeader.substringAfter("Bearer ")
-        authService.logout(accessToken, request?.refreshToken)
+        val accessToken = authorization?.takeIf { it.startsWith("Bearer ") }?.removePrefix("Bearer ")
+        if (accessToken != null) {
+            authService.logout(accessToken, request?.refreshToken)
+        }
     }
 
     @PostMapping("/logout-all")

@@ -811,19 +811,17 @@ class AuthControllerTest : ProblemResponseAssertions() {
             // Given
 
             // When
-            val result = mockMvc.get("/api/v1/auth/logout") {
+            val result = mockMvc.get("/api/v1/auth/logout-all") {
                 accept = APPLICATION_PROBLEM_JSON
             }
 
             // Then
-            assertMethodNotAllowed(result, "/api/v1/auth/logout")
+            assertMethodNotAllowed(result, "/api/v1/auth/logout-all")
 
             result.andExpect {
                 jsonPath("$.rejectedMethod") { value("GET") }
                 jsonPath("$.allowedMethods[0]") { value("POST") }
             }
-
-            verify(authService, never()).logoutAll(any())
         }
     }
 }

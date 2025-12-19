@@ -36,6 +36,7 @@ import io.github.aaravmahajanofficial.common.exception.model.AccountSuspendedExc
 import io.github.aaravmahajanofficial.common.exception.model.DefaultRoleNotFoundException
 import io.github.aaravmahajanofficial.common.exception.model.EmailNotVerifiedException
 import io.github.aaravmahajanofficial.common.exception.model.InvalidTokenException
+import io.github.aaravmahajanofficial.common.exception.model.ResourceNotFoundException
 import io.github.aaravmahajanofficial.common.exception.model.UserAlreadyExistsException
 import io.github.aaravmahajanofficial.config.JwtProperties
 import io.github.aaravmahajanofficial.users.RoleRepository
@@ -180,15 +181,17 @@ class AuthService(
                 val refreshClaims = jwtService.extractAllClaims(refreshToken)
                 val refreshTokenJti = UUID.fromString(refreshClaims.id)
                 refreshTokenManager.revokeRefreshToken(refreshTokenJti)
-            } catch (e: Exception) {
-                logger.warn("Failed to revoke refresh token during logout", e)
+            } catch (e: InvalidTokenException) {
+                logger.warn("Skipping refresh token revocation during logout due to invalid token", e)
+            } catch (e: IllegalArgumentException) {
+                logger.warn("Skipping refresh token revocation during logout due to malformed token ID", e)
             }
         }
     }
 
     @Transactional
     fun logoutAll(userId: UUID) {
-        val user = userRepository.findByIdOrNull(userId) ?: throw NoSuchElementException("User not found")
+        val user = userRepository.findByIdOrNull(userId) ?: throw ResourceNotFoundException("User", "id", userId)
 
         // Block all Access Tokens issued before now
         tokenBlacklistService.revokeAllUserTokens(user.id.toString())

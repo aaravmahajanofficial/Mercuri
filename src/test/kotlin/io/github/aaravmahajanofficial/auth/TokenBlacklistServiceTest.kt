@@ -74,7 +74,7 @@ class TokenBlacklistServiceTest {
     }
 
     @Test
-    fun `should return when specific JTI is blacklisted`() {
+    fun `should return true when specific JTI is blacklisted`() {
         // Given
         val issuedAt = Date()
         whenever(redisTemplate.hasKey("$tokenPrefix$jti")).thenReturn(true)

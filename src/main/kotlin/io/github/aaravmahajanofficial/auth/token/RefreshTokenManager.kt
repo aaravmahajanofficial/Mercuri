@@ -129,7 +129,7 @@ class RefreshTokenManager(
         refreshTokenRepository.saveAllAndFlush(activeTokens)
     }
 
-    fun revoke(oldTokenJti: UUID) {
+    private fun revoke(oldTokenJti: UUID) {
         val token = refreshTokenRepository.findById(oldTokenJti).orElseThrow {
             InvalidTokenException("Refresh token not found in DB")
         }
