@@ -13,19 +13,7 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.auth.login
+package io.github.aaravmahajanofficial.common.exception.model
 
-import io.github.aaravmahajanofficial.auth.AuthStatus
-import io.github.aaravmahajanofficial.users.RoleType
-import java.util.UUID
-
-data class UserDto(val id: UUID, val email: String, val roles: List<RoleType>)
-
-data class LoginResponseDto(
-    val authStatus: AuthStatus,
-    val accessToken: String,
-    val refreshToken: String,
-    val tokenType: String,
-    val expiresIn: Long,
-    val user: UserDto,
-)
+open class ResourceNotFoundException(val resourceName: String, val fieldName: String, val fieldValue: Any) :
+    RuntimeException("$resourceName not found with $fieldName: '$fieldValue'")

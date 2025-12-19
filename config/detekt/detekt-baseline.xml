@@ -11,6 +11,7 @@
     <ID>ReturnCount:RefreshTokenManager.kt:RefreshTokenManager$fun isTokenValid(jti: UUID): Boolean</ID>
     <ID>ReturnCount:TokenBlacklistService.kt:TokenBlacklistService$fun isTokenBlacklisted(jti: String, userId: String, issuedAt: Date): Boolean</ID>
     <ID>ThrowsCount:AuthService.kt:AuthService$fun refreshAccessToken(request: RefreshTokenRequestDto): RefreshTokenResponseDto</ID>
+    <ID>TooManyFunctions:GlobalExceptionHandler.kt:GlobalExceptionHandler</ID>
     <ID>VariableNaming:User.kt:User$@ManyToMany(fetch = FetchType.EAGER) @JoinTable( name = "user_role", joinColumns = [JoinColumn(name = "user_id")], inverseJoinColumns = [JoinColumn(name = "role_id")], ) @OnDelete(action = OnDeleteAction.CASCADE) protected var _roles: MutableSet&lt;Role&gt; = mutableSetOf()</ID>
     <ID>VariableNaming:User.kt:User$@OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true) protected var _addresses: MutableSet&lt;UserAddress&gt; = mutableSetOf()</ID>
   </CurrentIssues>

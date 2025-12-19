@@ -13,19 +13,18 @@
  * or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-package io.github.aaravmahajanofficial.auth.login
+package io.github.aaravmahajanofficial.users
 
-import io.github.aaravmahajanofficial.auth.AuthStatus
-import io.github.aaravmahajanofficial.users.RoleType
+import io.github.aaravmahajanofficial.auth.mappers.toProfileDto
+import io.github.aaravmahajanofficial.common.exception.model.ResourceNotFoundException
+import org.springframework.data.repository.findByIdOrNull
+import org.springframework.stereotype.Service
 import java.util.UUID
 
-data class UserDto(val id: UUID, val email: String, val roles: List<RoleType>)
-
-data class LoginResponseDto(
-    val authStatus: AuthStatus,
-    val accessToken: String,
-    val refreshToken: String,
-    val tokenType: String,
-    val expiresIn: Long,
-    val user: UserDto,
-)
+@Service
+class UserService(private val userRepository: UserRepository) {
+    fun getUserProfile(userId: UUID): UserProfileDto {
+        val user = userRepository.findByIdOrNull(userId) ?: throw ResourceNotFoundException("User", "id", userId)
+        return user.toProfileDto()
+    }
+}

@@ -108,6 +108,4 @@ class User(
         _addresses.remove(address)
         address.user = null
     }
-
-    override fun toString(): String = "User(id=$id, email=$email, fullName=${fullName()}, status=$status)"
 }

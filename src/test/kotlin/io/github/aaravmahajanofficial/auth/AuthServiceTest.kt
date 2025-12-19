@@ -232,9 +232,6 @@ class AuthServiceTest {
             result.expiresIn shouldBe 900L
             result.tokenType shouldBe "Bearer"
             result.authStatus shouldBe AuthStatus.VERIFIED
-
-            // 5. Response should contain the updated lastLoginAt
-            result.user.lastLoginAt shouldBe persistedUser.lastLoginAt
         }
 
         @Test

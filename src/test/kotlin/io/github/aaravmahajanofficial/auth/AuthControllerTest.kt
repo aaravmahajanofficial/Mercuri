@@ -353,13 +353,6 @@ class AuthControllerTest : ProblemResponseAssertions() {
                 // Verify the nested fields within the 'user' object
                 jsonPath("$.data.user.id") { value(serviceResponse.user.id.toString()) }
                 jsonPath("$.data.user.email") { value(serviceResponse.user.email) }
-                jsonPath("$.data.user.firstName") { value(serviceResponse.user.firstName) }
-                jsonPath("$.data.user.lastName") { value(serviceResponse.user.lastName) }
-                jsonPath("$.data.user.emailVerified") { value(serviceResponse.user.emailVerified) }
-                jsonPath("$.data.user.phoneVerified") { value(serviceResponse.user.phoneVerified) }
-                jsonPath("$.data.user.status") { value(serviceResponse.user.status.value) }
-                jsonPath("$.data.user.createdAt") { isNotEmpty() }
-                jsonPath("$.data.user.lastLoginAt") { isNotEmpty() }
                 jsonPath("$.data.user.roles") { value(hasItem(RoleType.CUSTOMER.value)) }
             }
 
@@ -569,14 +562,6 @@ class AuthControllerTest : ProblemResponseAssertions() {
         private fun createMockUser(id: UUID = UUID.randomUUID(), email: String = "john.doe@example.com") = UserDto(
             id = id,
             email = email,
-            firstName = "John",
-            lastName = "Doe",
-            phoneNumber = "+1234567890",
-            emailVerified = true,
-            phoneVerified = true,
-            status = UserStatus.ACTIVE,
-            createdAt = Instant.now(),
-            lastLoginAt = Instant.now(),
             roles = listOf(RoleType.CUSTOMER),
         )
     }

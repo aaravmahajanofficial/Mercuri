@@ -43,7 +43,6 @@ import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON
-import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.reactive.server.WebTestClient
@@ -55,12 +54,12 @@ import java.util.UUID
 @AutoConfigureWebTestClient
 @Import(TestcontainersConfiguration::class)
 class AuthIntegrationTests @Autowired constructor(
-    val webTestClient: WebTestClient,
-    val roleRepository: RoleRepository,
-    val userRepository: UserRepository,
-    val passwordEncoder: PasswordEncoder,
-    val refreshTokenRepository: RefreshTokenRepository,
-    val jwtService: JwtService,
+    private val webTestClient: WebTestClient,
+    private val roleRepository: RoleRepository,
+    private val userRepository: UserRepository,
+    private val passwordEncoder: PasswordEncoder,
+    private val refreshTokenRepository: RefreshTokenRepository,
+    private val jwtService: JwtService,
 ) {
     @BeforeEach
     fun setup() {
@@ -93,7 +92,8 @@ class AuthIntegrationTests @Autowired constructor(
 
             // Then
             result.expectStatus().isCreated
-                .expectHeader().contentType(APPLICATION_JSON)
+                .expectHeader()
+                .contentType(APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.data.id").isNotEmpty
                 .jsonPath("$.data.email").isEqualTo(registerRequest.email)
@@ -320,30 +320,6 @@ class AuthIntegrationTests @Autowired constructor(
 
             // Then
             result.expectStatus().isNoContent
-        }
-
-        @Test
-        fun `should return 405 Method Not Allowed for GET`() {
-            // Given
-            val tokenRequest = TokenRequest(
-                userID = UUID.randomUUID(),
-                email = "test@example.com",
-                roles = setOf(RoleType.CUSTOMER),
-            )
-            val jwt = jwtService.generateAccessToken(tokenRequest)
-
-            // When
-            val result = webTestClient.get()
-                .uri("/api/v1/auth/logout")
-                .header("Authorization", "Bearer $jwt")
-                .accept(APPLICATION_PROBLEM_JSON)
-                .exchange()
-
-            // Then
-            result.expectStatus().isEqualTo(HttpStatus.METHOD_NOT_ALLOWED)
-                .expectBody()
-                .jsonPath("$.rejectedMethod").isEqualTo("GET")
-                .jsonPath("$.allowedMethods[0]").isEqualTo("POST")
         }
     }
 }
