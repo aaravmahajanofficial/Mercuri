@@ -295,14 +295,7 @@ class AuthIntegrationTests @Autowired constructor(
         fun setUp() {
             createUser()
 
-            val response = webTestClient.post().uri("/api/v1/auth/login")
-                .contentType(APPLICATION_JSON)
-                .bodyValue(loginRequest())
-                .exchange()
-                .expectStatus().isOk
-                .expectBody<ApiResponse.Success<LoginResponseDto>>()
-                .returnResult()
-                .responseBody!!.data
+            val response = performLogin()
 
             accessToken = response.accessToken
             refreshToken = response.refreshToken
@@ -353,6 +346,79 @@ class AuthIntegrationTests @Autowired constructor(
             refreshTokenRepository.findAll().first().revoked.shouldBeTrue()
         }
     }
+
+    @Nested
+    @DisplayName("User Logout From All Devices")
+    inner class LogoutAll {
+
+        private lateinit var accessToken: String
+        private lateinit var refreshToken: String
+
+        @BeforeEach
+        fun setUp() {
+            createUser()
+            val response = performLogin()
+            accessToken = response.accessToken
+            refreshToken = response.refreshToken
+        }
+
+        @Test
+        fun `should invalidate ALL the tokens before the logout`() {
+            // Given - User logs in on two different "devices"
+            val loginResponse1 = performLogin()
+            val tokenDevice1 = loginResponse1.accessToken
+
+            Thread.sleep(100)
+
+            val loginResponse2 = performLogin()
+            val tokenDevice2 = loginResponse2.accessToken
+
+            // When
+            webTestClient.post()
+                .uri("/api/v1/auth/logout-all")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $tokenDevice1")
+                .exchange()
+                .expectStatus().isNoContent
+
+            // Then - Verify Access is Denied on both "devices"
+            // Check Device 1
+            webTestClient.get()
+                .uri("/api/v1/users/me")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $tokenDevice1")
+                .exchange()
+                .expectStatus().isUnauthorized
+                .expectBody()
+                .jsonPath("$.detail").isEqualTo("Token has been revoked")
+
+            // Check Device 2
+            webTestClient.get()
+                .uri("/api/v1/users/me")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $tokenDevice2")
+                .exchange()
+                .expectStatus().isUnauthorized
+                .expectBody()
+                .jsonPath("$.detail").isEqualTo("Token has been revoked")
+
+            // Check that NEW logins still work, and the user is not permanently banned
+            Thread.sleep(1000)
+
+            val tokenDevice3 = performLogin().accessToken
+            webTestClient.get()
+                .uri("/api/v1/users/me")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $tokenDevice3")
+                .exchange()
+                .expectStatus().isOk
+        }
+    }
+
+    private fun performLogin(): LoginResponseDto = webTestClient.post().uri("/api/v1/auth/login")
+        .contentType(APPLICATION_JSON)
+        .bodyValue(loginRequest())
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<ApiResponse.Success<LoginResponseDto>>()
+        .returnResult()
+        .responseBody!!.data
 
     private fun createUser(userStatus: UserStatus = UserStatus.ACTIVE, emailVerified: Boolean = true): User {
         val customerRole = roleRepository.findByName(RoleType.CUSTOMER) ?: error("Customer role missing in DB")
