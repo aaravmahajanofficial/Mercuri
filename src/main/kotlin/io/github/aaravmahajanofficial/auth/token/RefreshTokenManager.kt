@@ -17,6 +17,7 @@ package io.github.aaravmahajanofficial.auth.token
 
 import io.github.aaravmahajanofficial.auth.jwt.JwtService
 import io.github.aaravmahajanofficial.auth.jwt.TokenRequest
+import io.github.aaravmahajanofficial.common.exception.model.InvalidTokenException
 import io.github.aaravmahajanofficial.config.JwtProperties
 import io.github.aaravmahajanofficial.users.User
 import jakarta.transaction.Transactional
@@ -129,10 +130,11 @@ class RefreshTokenManager(
     }
 
     fun revoke(oldTokenJti: UUID) {
-        refreshTokenRepository.findById(oldTokenJti).ifPresent {
-            it.revoked = true
-            refreshTokenRepository.saveAndFlush(it)
+        val token = refreshTokenRepository.findById(oldTokenJti).orElseThrow {
+            InvalidTokenException("Refresh token not found in DB")
         }
+        token.revoked = true
+        refreshTokenRepository.saveAndFlush(token)
     }
 
     private fun getRedisKey(jti: UUID?): String = "$REDIS_PREFIX$jti"

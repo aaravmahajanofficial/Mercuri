@@ -17,10 +17,12 @@ package io.github.aaravmahajanofficial.auth
 
 import io.github.aaravmahajanofficial.TestcontainersConfiguration
 import io.github.aaravmahajanofficial.auth.jwt.JwtService
-import io.github.aaravmahajanofficial.auth.jwt.TokenRequest
 import io.github.aaravmahajanofficial.auth.login.LoginRequestDto
+import io.github.aaravmahajanofficial.auth.login.LoginResponseDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenRepository
+import io.github.aaravmahajanofficial.auth.token.RefreshTokenRequestDto
+import io.github.aaravmahajanofficial.common.ApiResponse
 import io.github.aaravmahajanofficial.users.Role
 import io.github.aaravmahajanofficial.users.RoleRepository
 import io.github.aaravmahajanofficial.users.RoleType
@@ -41,13 +43,15 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
 import org.springframework.context.annotation.Import
+import org.springframework.data.redis.core.StringRedisTemplate
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.reactive.server.WebTestClient
+import org.springframework.test.web.reactive.server.expectBody
 import java.time.Instant
-import java.util.UUID
 
 @ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -60,12 +64,14 @@ class AuthIntegrationTests @Autowired constructor(
     private val passwordEncoder: PasswordEncoder,
     private val refreshTokenRepository: RefreshTokenRepository,
     private val jwtService: JwtService,
+    private val redisTemplate: StringRedisTemplate,
 ) {
     @BeforeEach
     fun setup() {
         userRepository.deleteAll()
         roleRepository.deleteAll()
         refreshTokenRepository.deleteAll()
+        redisTemplate.connectionFactory?.connection?.serverCommands()?.flushAll()
 
         roleRepository.saveAndFlush(Role(name = RoleType.CUSTOMER))
     }
@@ -137,7 +143,8 @@ class AuthIntegrationTests @Autowired constructor(
             webTestClient.post().uri("/api/v1/auth/register")
                 .contentType(APPLICATION_JSON)
                 .bodyValue(registerRequest)
-                .exchange().expectStatus().isEqualTo(HttpStatus.CONFLICT)
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.CONFLICT)
 
             // Then - DB State
             userRepository.count() shouldBe 1 // Constraint ensures no duplicate records
@@ -157,7 +164,8 @@ class AuthIntegrationTests @Autowired constructor(
             webTestClient.post().uri("/api/v1/auth/register")
                 .contentType(APPLICATION_JSON)
                 .bodyValue(registerRequest)
-                .exchange().expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT)
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT)
 
             // Then - DB State
             userRepository.findByEmail(registerRequest.email).shouldBeNull() // User should not exist in DB
@@ -200,7 +208,8 @@ class AuthIntegrationTests @Autowired constructor(
             webTestClient.post().uri("/api/v1/auth/login")
                 .contentType(APPLICATION_JSON)
                 .bodyValue(wrongRequest)
-                .exchange().expectStatus().isUnauthorized
+                .exchange()
+                .expectStatus().isUnauthorized
 
             // Then
             userRepository.findByEmail(wrongRequest.email)?.lastLoginAt.shouldBeNull()
@@ -215,7 +224,8 @@ class AuthIntegrationTests @Autowired constructor(
             webTestClient.post().uri("/api/v1/auth/login")
                 .contentType(APPLICATION_JSON)
                 .bodyValue(wrongRequest)
-                .exchange().expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED)
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED)
 
             // Then
             // A user should not be created upon failed login attempt
@@ -231,7 +241,8 @@ class AuthIntegrationTests @Autowired constructor(
             webTestClient.post().uri("/api/v1/auth/login")
                 .contentType(APPLICATION_JSON)
                 .bodyValue(loginRequest())
-                .exchange().expectStatus().isEqualTo(HttpStatus.FORBIDDEN)
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.FORBIDDEN)
 
             // Then
             userRepository.findByEmail(loginRequest().email)?.lastLoginAt.shouldBeNull()
@@ -246,7 +257,8 @@ class AuthIntegrationTests @Autowired constructor(
             webTestClient.post().uri("/api/v1/auth/login")
                 .contentType(APPLICATION_JSON)
                 .bodyValue(loginRequest())
-                .exchange().expectStatus().isForbidden
+                .exchange()
+                .expectStatus().isForbidden
 
             // Then
             userRepository.findByEmail(loginRequest().email)?.lastLoginAt.shouldBeNull()
@@ -270,56 +282,100 @@ class AuthIntegrationTests @Autowired constructor(
             // Then
             userRepository.findByEmail(loginRequest().email)?.lastLoginAt.shouldBeNull()
         }
-
-        private fun createUser(userStatus: UserStatus = UserStatus.ACTIVE, emailVerified: Boolean = true): User {
-            val customerRole = roleRepository.findByName(RoleType.CUSTOMER) ?: error("Customer role missing in DB")
-
-            return userRepository.saveAndFlush(
-                User(
-                    email = "valid.user@example.com",
-                    passwordHash = passwordEncoder.encode("StrongP@ss1")!!,
-                    firstName = "Test",
-                    lastName = "User",
-                    phoneNumber = "+1234567890",
-                    phoneVerified = true,
-                    emailVerified = emailVerified,
-                    status = userStatus,
-                    createdAt = Instant.now(),
-                    updatedAt = Instant.now(),
-                ).apply { addRole(customerRole) },
-            )
-        }
-
-        private fun loginRequest(email: String = "valid.user@example.com", password: String = "StrongP@ss1") =
-            LoginRequestDto(
-                email = email,
-                password = password,
-            )
     }
 
     @Nested
     @DisplayName("User Logout")
     inner class Logout {
-        @Test
-        fun `should return 204 No Content when logout succeeds`() {
-            // Given
-            val tokenRequest = TokenRequest(
-                userID = UUID.randomUUID(),
-                email = "test@example.com",
-                roles = setOf(RoleType.CUSTOMER),
-            )
 
-            val jwt = jwtService.generateAccessToken(tokenRequest)
+        private lateinit var accessToken: String
+        private lateinit var refreshToken: String
 
-            // When
-            val result = webTestClient.post()
-                .uri("/api/v1/auth/logout")
-                .header("Authorization", "Bearer $jwt")
-                .accept(APPLICATION_JSON)
+        @BeforeEach
+        fun setUp() {
+            createUser()
+
+            val response = webTestClient.post().uri("/api/v1/auth/login")
+                .contentType(APPLICATION_JSON)
+                .bodyValue(loginRequest())
                 .exchange()
+                .expectStatus().isOk
+                .expectBody<ApiResponse.Success<LoginResponseDto>>()
+                .returnResult()
+                .responseBody!!.data
+
+            accessToken = response.accessToken
+            refreshToken = response.refreshToken
+        }
+
+        @Test
+        fun `should blacklist the specific access token`() {
+            // Given
+            // When
+            webTestClient.post()
+                .uri("/api/v1/auth/logout")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $accessToken")
+                .exchange()
+                .expectStatus().isNoContent
 
             // Then
-            result.expectStatus().isNoContent
+            // 1. Verify if the key is added to redis
+            val claims = jwtService.extractAllClaims(accessToken)
+            val blacklistKey = "jwt:bl:token:${claims.id}"
+
+            redisTemplate.hasKey(blacklistKey).shouldBeTrue()
+
+            // 2. Verify Access is Denied
+            webTestClient.get()
+                .uri("/api/v1/users/me")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $accessToken")
+                .exchange()
+                .expectStatus().isUnauthorized
+                .expectBody()
+                .jsonPath("$.detail").isEqualTo("Token has been revoked")
+        }
+
+        @Test
+        fun `should revoke the refresh token if provided in body`() {
+            // Given
+            val refreshTokenDto = RefreshTokenRequestDto(refreshToken)
+
+            // When
+            webTestClient.post()
+                .uri("/api/v1/auth/logout")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $accessToken")
+                .contentType(APPLICATION_JSON)
+                .bodyValue(refreshTokenDto)
+                .exchange()
+                .expectStatus().isNoContent
+
+            // Then
+            refreshTokenRepository.findAll().first().revoked.shouldBeTrue()
         }
     }
+
+    private fun createUser(userStatus: UserStatus = UserStatus.ACTIVE, emailVerified: Boolean = true): User {
+        val customerRole = roleRepository.findByName(RoleType.CUSTOMER) ?: error("Customer role missing in DB")
+
+        return userRepository.saveAndFlush(
+            User(
+                email = "valid.user@example.com",
+                passwordHash = passwordEncoder.encode("StrongP@ss1")!!,
+                firstName = "Test",
+                lastName = "User",
+                phoneNumber = "+1234567890",
+                phoneVerified = true,
+                emailVerified = emailVerified,
+                status = userStatus,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            ).apply { addRole(customerRole) },
+        )
+    }
+
+    private fun loginRequest(email: String = "valid.user@example.com", password: String = "StrongP@ss1") =
+        LoginRequestDto(
+            email = email,
+            password = password,
+        )
 }

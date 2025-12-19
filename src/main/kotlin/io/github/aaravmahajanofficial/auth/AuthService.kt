@@ -53,7 +53,6 @@ import org.springframework.stereotype.Service
 import java.time.Instant
 import java.util.UUID
 
-@Suppress("TooGenericExceptionCaught")
 @Service
 class AuthService(
     private val userRepository: UserRepository,
@@ -118,6 +117,7 @@ class AuthService(
         )
     }
 
+    @Transactional
     fun refreshAccessToken(request: RefreshTokenRequestDto): RefreshTokenResponseDto {
         // 1. Basic JWT Validation (Signature + Expiration)
         val validationResult = jwtService.validateToken(request.refreshToken, TokenType.REFRESH)
@@ -165,17 +165,14 @@ class AuthService(
         )
     }
 
+    @Transactional
     fun logout(accessToken: String, refreshToken: String?) {
-        try {
-            val accessClaims = jwtService.extractAllClaims(accessToken)
-            val jti = accessClaims.id
-            val expiresAt = accessClaims.expiration.toInstant()
+        val accessClaims = jwtService.extractAllClaims(accessToken)
+        val jti = accessClaims.id
+        val expiresAt = accessClaims.expiration.toInstant()
 
-            if (jti != null) {
-                tokenBlacklistService.blacklistToken(jti, expiresAt)
-            }
-        } catch (e: Exception) {
-            logger.warn("Failed to blacklist access token during logout", e)
+        if (jti != null) {
+            tokenBlacklistService.blacklistToken(jti, expiresAt)
         }
 
         if (!refreshToken.isNullOrBlank()) {

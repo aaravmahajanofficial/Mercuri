@@ -24,6 +24,7 @@ import io.github.aaravmahajanofficial.auth.token.RefreshTokenRequestDto
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenResponseDto
 import io.github.aaravmahajanofficial.common.ApiResponse
 import jakarta.validation.Valid
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE
@@ -69,7 +70,7 @@ class AuthController(private val authService: AuthService) {
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun logout(
-        @RequestHeader("Authorization") authHeader: String,
+        @RequestHeader(HttpHeaders.AUTHORIZATION) authHeader: String,
         @RequestBody(required = false) request: RefreshTokenRequestDto?,
     ) {
         val accessToken = authHeader.substringAfter("Bearer ")
