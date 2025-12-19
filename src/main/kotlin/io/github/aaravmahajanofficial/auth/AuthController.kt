@@ -71,7 +71,7 @@ class AuthController(private val authService: AuthService) {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun logout(
         @RequestHeader(HttpHeaders.AUTHORIZATION) authorization: String?,
-        @RequestBody(required = false) request: RefreshTokenRequestDto?,
+        @Valid @RequestBody(required = false) request: RefreshTokenRequestDto?,
     ) {
         val accessToken = authorization?.takeIf { it.startsWith("Bearer ") }?.removePrefix("Bearer ")
         if (accessToken != null) {
