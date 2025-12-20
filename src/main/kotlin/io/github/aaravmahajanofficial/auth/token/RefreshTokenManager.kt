@@ -21,6 +21,7 @@ import io.github.aaravmahajanofficial.common.exception.model.InvalidTokenExcepti
 import io.github.aaravmahajanofficial.config.JwtProperties
 import io.github.aaravmahajanofficial.users.User
 import jakarta.transaction.Transactional
+import org.slf4j.LoggerFactory
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.stereotype.Service
 import java.time.Duration
@@ -35,6 +36,9 @@ class RefreshTokenManager(
     private val refreshTokenRepository: RefreshTokenRepository,
     private val redisTemplate: StringRedisTemplate,
 ) {
+
+    private val logger = LoggerFactory.getLogger(RefreshTokenManager::class.java)
+
     private companion object {
         const val REDIS_PREFIX = "jwt:rt:"
     }
@@ -57,25 +61,27 @@ class RefreshTokenManager(
             ipAddress = ipAddress,
         )
 
-        refreshTokenRepository.saveAndFlush(refreshTokenEntity)
+        refreshTokenRepository.save(refreshTokenEntity)
 
         // Cache
-        val redisKey = getRedisKey(jti)
-        redisTemplate.opsForValue()
-            .set(redisKey, user.id.toString(), Duration.ofMillis(jwtProperties.refreshTokenExpiration))
+        cacheTokenSafely(jti, user.id.toString(), Duration.ofMillis(jwtProperties.refreshTokenExpiration))
 
         return refreshToken
     }
 
     @Transactional
     fun rotateRefreshToken(oldTokenJti: UUID, user: User): String {
+        val token = refreshTokenRepository.findById(oldTokenJti).orElseThrow {
+            InvalidTokenException("Refresh token not found in DB")
+        }
+
         // Revoke old token
-        redisTemplate.delete(getRedisKey(oldTokenJti))
+        token.revoked = true
+        refreshTokenRepository.save(token)
 
-        // Mark revoked in DB
-        revoke(oldTokenJti)
+        runCatching { redisTemplate.delete(getRedisKey(oldTokenJti)) }
 
-        // Issue new token
+        // Issue new refresh token
         return createRefreshToken(user)
     }
 
@@ -83,9 +89,8 @@ class RefreshTokenManager(
         val redisKey = getRedisKey(jti)
 
         // FAST PATH: Redis hit
-        if (redisTemplate.hasKey(redisKey)) {
-            return true
-        }
+        val redisHit = runCatching { redisTemplate.hasKey(redisKey) }.getOrElse { false }
+        if (redisHit == true) return true
 
         // FALLBACK: Check DB
         val refreshToken = refreshTokenRepository.findById(jti).orElse(null) ?: return false
@@ -96,22 +101,22 @@ class RefreshTokenManager(
         }
 
         // SELF-HEAL: Rehydrate Redis
-        redisTemplate.opsForValue().set(
-            redisKey,
-            refreshToken.user.id.toString(),
-            Duration.between(Instant.now(), refreshToken.expiresAt),
-        )
+        cacheTokenSafely(jti, refreshToken.user.id.toString(), Duration.between(Instant.now(), refreshToken.expiresAt))
 
         return true
     }
 
     @Transactional
     fun revokeRefreshToken(oldTokenJti: UUID) {
-        // Remove from Redis
-        redisTemplate.delete(getRedisKey(oldTokenJti))
+        val token = refreshTokenRepository.findById(oldTokenJti).orElseThrow {
+            InvalidTokenException("Refresh token not found in DB")
+        }
 
-        // Mark revoked in DB
-        revoke(oldTokenJti)
+        token.revoked = true
+        refreshTokenRepository.save(token)
+
+        runCatching { redisTemplate.delete(getRedisKey(oldTokenJti)) }
+        logger.info("Revoked refresh token: $oldTokenJti")
     }
 
     @Transactional
@@ -119,22 +124,26 @@ class RefreshTokenManager(
         val activeTokens = refreshTokenRepository.findAllByUserIdAndRevokedFalse(requireNotNull(user.id))
         if (activeTokens.isEmpty()) return
 
-        // Remove all from Redis
-        val redisKeys = activeTokens.map { getRedisKey(it.jti) }
-        redisTemplate.delete(redisKeys)
-
-        activeTokens.forEach { it.revoked = true }
-
         // Mark all as revoked in DB
-        refreshTokenRepository.saveAllAndFlush(activeTokens)
+        activeTokens.forEach { it.revoked = true }
+        refreshTokenRepository.saveAll(activeTokens)
+
+        runCatching {
+            val redisKeys = activeTokens.map { getRedisKey(it.jti) }
+            redisTemplate.delete(redisKeys)
+        }.onFailure {
+            logger.error("Failed to clear Redis keys for user ${user.id}", it)
+        }
+
+        logger.info("Revoked all tokens for user: ${user.id}")
     }
 
-    private fun revoke(oldTokenJti: UUID) {
-        val token = refreshTokenRepository.findById(oldTokenJti).orElseThrow {
-            InvalidTokenException("Refresh token not found in DB")
+    private fun cacheTokenSafely(jti: UUID, userId: String, duration: Duration) {
+        runCatching {
+            redisTemplate.opsForValue().set(getRedisKey(jti), userId, duration)
+        }.onFailure {
+            logger.warn("Failed to cache refresh token $jti in Redis. System operating in DB-only mode.")
         }
-        token.revoked = true
-        refreshTokenRepository.saveAndFlush(token)
     }
 
     private fun getRedisKey(jti: UUID?): String = "$REDIS_PREFIX$jti"

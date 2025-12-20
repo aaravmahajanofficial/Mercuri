@@ -22,6 +22,7 @@ import io.github.aaravmahajanofficial.auth.login.LoginResponseDto
 import io.github.aaravmahajanofficial.auth.register.RegisterRequestDto
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenRepository
 import io.github.aaravmahajanofficial.auth.token.RefreshTokenRequestDto
+import io.github.aaravmahajanofficial.auth.token.RefreshTokenResponseDto
 import io.github.aaravmahajanofficial.common.ApiResponse
 import io.github.aaravmahajanofficial.users.Role
 import io.github.aaravmahajanofficial.users.RoleRepository
@@ -35,6 +36,7 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldNotBeEmpty
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -52,6 +54,7 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.test.web.reactive.server.expectBody
 import java.time.Instant
+import java.util.UUID
 
 @ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -281,6 +284,45 @@ class AuthIntegrationTests @Autowired constructor(
 
             // Then
             userRepository.findByEmail(loginRequest().email)?.lastLoginAt.shouldBeNull()
+        }
+    }
+
+    @Nested
+    @DisplayName("Refresh Token")
+    inner class RefreshToken {
+        @Test
+        fun `should rotate refresh token and return new access token`() {
+            // Given
+            createUser()
+            val loginResponse = performLogin()
+            val originalRefreshToken = loginResponse.refreshToken
+            val refreshTokenRequest = RefreshTokenRequestDto(originalRefreshToken)
+
+            // When
+            val result = webTestClient.post()
+                .uri("/api/v1/auth/refresh")
+                .contentType(APPLICATION_JSON)
+                .bodyValue(refreshTokenRequest)
+                .exchange()
+                .expectStatus().isOk
+                .expectBody<ApiResponse.Success<RefreshTokenResponseDto>>()
+                .returnResult()
+                .responseBody!!.data
+
+            result.accessToken.shouldNotBeEmpty()
+            result.refreshToken.shouldNotBeEmpty()
+            result.refreshToken shouldNotBe originalRefreshToken
+
+            // Then - Verify old token is marked "revoked"
+            val claims = jwtService.extractAllClaims(originalRefreshToken)
+            refreshTokenRepository.findById(UUID.fromString(claims.id)).get().revoked.shouldBeTrue()
+
+            webTestClient.post()
+                .uri("/api/v1/auth/refresh")
+                .contentType(APPLICATION_JSON)
+                .bodyValue(refreshTokenRequest)
+                .exchange()
+                .expectStatus().isUnauthorized
         }
     }
 
