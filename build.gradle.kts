@@ -96,6 +96,7 @@ kover {
                     "io.github.aaravmahajanofficial.common.LogSanitizer",
                     "io.github.aaravmahajanofficial.common.exception.model.*",
                     "*Dto",
+                    "*Mappers*",
                 )
             }
         }
@@ -110,7 +111,7 @@ kover {
 
             rule("Branch Coverage") {
                 bound {
-                    minValue = 68
+                    minValue = 70
                     coverageUnits = CoverageUnit.BRANCH
                     aggregationForGroup = AggregationType.COVERED_PERCENTAGE
                 }
