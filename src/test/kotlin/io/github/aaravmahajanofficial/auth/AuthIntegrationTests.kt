@@ -316,6 +316,13 @@ class AuthIntegrationTests @Autowired constructor(
             // Then - Verify old token is marked "revoked"
             val claims = jwtService.extractAllClaims(originalRefreshToken)
             refreshTokenRepository.findById(UUID.fromString(claims.id)).get().revoked.shouldBeTrue()
+
+            webTestClient.post()
+                .uri("/api/v1/auth/refresh")
+                .contentType(APPLICATION_JSON)
+                .bodyValue(refreshTokenRequest)
+                .exchange()
+                .expectStatus().isUnauthorized
         }
     }
 
