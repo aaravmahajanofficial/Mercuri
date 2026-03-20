@@ -18,7 +18,7 @@ kotlin-logging = "8.0.01"
 kotest = "6.1.6"
 mockito-kotlin = "6.3.0"
 kover = "0.9.7"
-testcontainers = "2.0.3"
+testcontainers = "2.0.4"
 
 # Security
 jjwt = "0.13.0"
