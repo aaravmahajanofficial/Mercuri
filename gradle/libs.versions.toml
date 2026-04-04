@@ -15,7 +15,7 @@ spring-dependency-management = "1.1.7"
 kotlin-logging = "8.0.01"
 
 # Testing
-kotest = "6.1.6"
+kotest = "6.1.11"
 mockito-kotlin = "6.3.0"
 kover = "0.9.7"
 testcontainers = "2.0.4"
