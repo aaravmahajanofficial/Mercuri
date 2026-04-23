@@ -8,7 +8,7 @@ spotless = "8.4.0"
 ktlint = "1.7.1"
 
 # Spring Boot & Core
-spring-boot = "4.0.4"
+spring-boot = "4.0.6"
 spring-dependency-management = "1.1.7"
 
 # Observability
