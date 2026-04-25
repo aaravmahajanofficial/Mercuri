@@ -3,7 +3,7 @@
 kotlin = "2.2.20"
 
 # Quality
-detekt = "2.0.0-alpha.2"
+detekt = "2.0.0-alpha.3"
 spotless = "8.4.0"
 ktlint = "1.7.1"
 
