@@ -4,7 +4,7 @@ kotlin = "2.4.10"
 
 # Quality
 detekt = "2.0.0-alpha.5"
-spotless = "8.5.1"
+spotless = "8.8.0"
 ktlint = "1.7.1"
 
 # Spring Boot & Core
