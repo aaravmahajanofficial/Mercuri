@@ -1,6 +1,6 @@
 [versions]
 # Kotlin and Gradle
-kotlin = "2.4.10"
+kotlin = "2.4.20"
 
 # Quality
 detekt = "2.0.0-alpha.6"
